@@ -1,0 +1,23 @@
+# Gradle, Kotlin and build output
+.gradle/
+.kotlin/
+**/build/
+
+# Machine-specific configuration and signing keys
+local.properties
+*.keystore
+*.jks
+.idea/
+*.iml
+
+# Local native toolchain/source checkout and generated deliverables
+.native/
+vendor/
+/artifacts/
+
+# Development/test utilities, suites and working documentation
+/scripts/
+/app/src/test/
+/app/src/androidTest/
+/docs/*
+!/docs/licenses/
