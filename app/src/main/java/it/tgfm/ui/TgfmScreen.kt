@@ -35,6 +35,8 @@ import java.time.format.DateTimeFormatter
 @Composable fun TgfmScreen(vm: AppViewModel, onShare: (Downloaded?) -> Unit, onChooseFolder: () -> Unit, onStorageAccess: () -> Unit, onSelectionShare: () -> Unit, onFtp: (Boolean) -> Unit, onDownload: (Boolean) -> Unit) {
  val s by vm.state.collectAsStateWithLifecycle()
  val listState = remember(s.tab, if (s.tab == AppTab.SELECTION.ordinal) s.channel?.id else null) { LazyListState() }
+ var permissionPromptHandled by rememberSaveable { mutableStateOf(false) }
+ var editingApi by rememberSaveable { mutableStateOf(false) }
  var selectedChannelMenu by remember { mutableStateOf(false) }
  var selectionQuery by rememberSaveable(s.channel?.id) { mutableStateOf("") }
  var removeFavoriteId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -91,12 +93,24 @@ import java.time.format.DateTimeFormatter
      when (s.tab) {
       AppTab.SETTINGS.ordinal -> {
        item { Heading("Il tuo archivio Telegram", "Accedi con il tuo account e scegli un canale, anche privato.") }
-       item { InfoCard { Text("Stato · ${s.connection}"); Text(authLabel(s.auth), fontWeight = FontWeight.SemiBold) } }
+       item { InfoCard {
+        Text("Stato · ${s.connection}")
+        Text(TelegramAccess.label(s.auth, s.savedTelegramAccess, s.fileAccess) ?: authLabel(s.auth), fontWeight = FontWeight.SemiBold)
+        if (s.savedTelegramAccess == SavedTelegramAccess.AVAILABLE && s.auth in listOf("notStarted", "authorizationStateClosed", "authorizationStateWaitTdlibParameters")) {
+         Text(if (s.fileAccess) "Le credenziali precedenti sono disponibili. TgFM riapre la sessione Telegram esistente." else "Le credenziali precedenti sono disponibili. Concedi l'accesso ai file per riaprire la sessione Telegram: non serve reinserire API ID e API hash.", style = MaterialTheme.typography.bodySmall)
+         TextButton(onClick = vm::reconnect, enabled = !s.busy && s.fileAccess) { Text("Riprova accesso salvato") }
+         TextButton(onClick = { editingApi = !editingApi }, enabled = !s.busy) { Text(if (editingApi) "Chiudi modifica API" else "Modifica credenziali API") }
+        }
+        if (s.telegramAccessError.isNotBlank()) {
+         Text(s.telegramAccessError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+         TextButton(onClick = vm::reconnect, enabled = !s.busy) { Text("Riprova lettura credenziali") }
+        }
+       } }
        item { InfoCard {
         Text("Cartella di lavoro", style = MaterialTheme.typography.titleMedium)
         Text(s.workPath, style = MaterialTheme.typography.bodySmall)
         if (!s.fileAccess) {
-         Text("TDLib deve poter scrivere direttamente nella cartella esterna. Concedi l'accesso ai file nelle impostazioni Android.", style = MaterialTheme.typography.bodySmall)
+         Text("Telegram è in attesa dell’accesso alla cartella esterna. Su Android 11 o successivo: Impostazioni → Applicazioni → Accesso speciale → Accesso a tutti i file → TgFM. Questo accesso non compare nei permessi ordinari.", style = MaterialTheme.typography.bodySmall)
          Button(onClick = onStorageAccess, enabled = !s.busy) { Text("Concedi accesso ai file") }
         }
         OutlinedButton(onClick = onChooseFolder, enabled = !s.busy && s.fileAccess) { Text("Scegli cartella") }
@@ -119,14 +133,14 @@ import java.time.format.DateTimeFormatter
         Row { OutlinedButton(onClick = { editFtp = true }, enabled = !s.busy) { Text("Configura FTP") }
          TextButton(onClick = vm::testFtp, enabled = !s.busy && s.ftp.host.isNotBlank()) { Text("Verifica accesso") } }
        } }
-       if (s.auth in listOf("notStarted", "authorizationStateClosed", "authorizationStateWaitTdlibParameters")) {
+       if (TelegramAccess.showCredentialForm(s.auth, s.savedTelegramAccess, editingApi)) {
         item { InfoCard {
          Text("Credenziali dell'app Telegram", style = MaterialTheme.typography.titleMedium)
          Text("Ottieni API ID e API hash da my.telegram.org → API development tools. Restano cifrati su questo dispositivo.", style = MaterialTheme.typography.bodySmall)
          OutlinedTextField(apiId, { apiId = it }, label = { Text("API ID") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
          OutlinedTextField(apiHash, { apiHash = it }, label = { Text("API hash") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-         Button(onClick = { vm.connect(apiId, apiHash); apiHash = "" }, enabled = !s.busy && apiId.isNotBlank() && apiHash.isNotBlank()) { Text("Configura accesso") }
-         TextButton(onClick = vm::reconnect, enabled = !s.busy) { Text("Riutilizza credenziali salvate") }
+         Button(onClick = { vm.connect(apiId, apiHash); apiHash = "" }, enabled = !s.busy && s.fileAccess && apiId.isNotBlank() && apiHash.isNotBlank()) { Text("Configura accesso") }
+
         } }
        }
        if (s.authInfo.isNotEmpty()) item { Text(s.authInfo) }
@@ -321,6 +335,12 @@ import java.time.format.DateTimeFormatter
     }
    }
   }
+  if (s.ready && !s.busy && !s.fileAccess && !permissionPromptHandled) AlertDialog(
+   onDismissRequest = { permissionPromptHandled = true }, title = { Text("Accesso ai file necessario") },
+   text = { Text((if (s.savedTelegramAccess == SavedTelegramAccess.AVAILABLE) "Le credenziali Telegram sono ancora salvate. " else "") +
+    if (android.os.Build.VERSION.SDK_INT >= 30) "Per avviare Telegram nella cartella esterna, apri l'accesso speciale Android e abilita TgFM in Accesso a tutti i file. Al ritorno l'app riutilizzerà le credenziali salvate, se disponibili." else "Per usare la cartella esterna, consenti ad Android l'accesso ai file. L'app riutilizzerà le credenziali salvate, se disponibili.") },
+   confirmButton = { TextButton(onClick = { permissionPromptHandled = true; onStorageAccess() }) { Text("Concedi accesso") } },
+   dismissButton = { TextButton(onClick = { permissionPromptHandled = true }) { Text("Non ora") } })
   if (reviewExamples) AlertDialog(onDismissRequest = { reviewExamples = false }, title = { Text("Regole comuni proposte") }, text = {
    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Text("${desired.size + unwanted.size} esempi → ${learning.rules.size} regole. Nessun salvataggio automatico.")

@@ -29,6 +29,7 @@ data class UiState(
  val message: String = "", val failures: List<String> = emptyList(), val retry: List<Attachment> = emptyList(),
  val activeDownloads: Map<Int, DownloadProgress> = emptyMap(),
  val workPath: String = "", val fileAccess: Boolean = false, val ftp: FtpSettings = FtpSettings(),
+ val savedTelegramAccess: SavedTelegramAccess = SavedTelegramAccess.CHECKING, val telegramAccessError: String = "",
  val shareFiles: List<Downloaded> = emptyList(), val ready: Boolean = false
 ) {
  val activeRules: List<Rule> get() = if (channel == null) emptyList() else rules.filter { it.channelId == channel.id }
@@ -51,6 +52,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  private var initialRoutePending = true
  private val fileLocks = ConcurrentHashMap<Int, Mutex>()
  private var operation: Job? = null
+ @Volatile private var foregroundRecheckPending = false
  init {
   viewModelScope.launch { app.preferences.configuration.catch { notify("Impossibile leggere canali e filtri: ${it.message}") }.collect { config ->
    applyConfiguration(config)
@@ -76,18 +78,35 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    }
   } }
   launchOperation("Apertura archivio…") {
-   val initialConfig = app.preferences.configuration.first()
-   val clearPrevious = app.preferences.clearBeforeDownload.first()
-   applyConfiguration(initialConfig)
-   _state.update { it.copy(clearBeforeDownload = clearPrevious) }
-   app.storage.removeLegacyAttachments()
-   updateStorageState()
-   _state.update { it.copy(ftp = app.vault.loadFtp()) }
-   refreshDownloads(selectAll = true)
-   if (app.storage.folder.hasAccess()) { app.storage.folder.requireReady(); app.vault.load()?.let { tg.start(it) } }
-   _state.update { it.copy(ready = true) }
+   try {
+    // Read the encrypted login independently of external storage and FTP settings.
+    val credentials = readSavedTelegramAccess()
+    val initialConfig = app.preferences.configuration.first()
+    val clearPrevious = app.preferences.clearBeforeDownload.first()
+    applyConfiguration(initialConfig)
+    _state.update { it.copy(clearBeforeDownload = clearPrevious) }
+    app.storage.removeLegacyAttachments()
+    updateStorageState()
+    try { _state.update { it.copy(ftp = app.vault.loadFtp()) } }
+    catch (_: Exception) { notify("Configurazione FTP non leggibile. Le credenziali Telegram vengono gestite separatamente; nessun dato è stato cancellato.") }
+    refreshDownloads(selectAll = true)
+    if (credentials != null && app.storage.folder.hasAccess()) {
+     app.storage.folder.requireReady()
+     tg.start(credentials)
+    }
+   } finally { _state.update { it.copy(ready = true) } }
   }
  }
+ private fun readSavedTelegramAccess(): Credentials? = try {
+  app.vault.load().also { credentials -> _state.update { it.copy(
+   savedTelegramAccess = if (credentials == null) SavedTelegramAccess.MISSING else SavedTelegramAccess.AVAILABLE,
+   telegramAccessError = "") } }
+ } catch (_: Exception) {
+  _state.update { it.copy(savedTelegramAccess = SavedTelegramAccess.UNREADABLE,
+   telegramAccessError = "I dati di accesso sono presenti, ma Android non permette di leggerli. Non sono stati cancellati o sostituiti. Non disinstallare l'app e non cancellarne i dati.") }
+  null
+ }
+
  private fun authDescription(auth: JSONObject): String = when (auth.optString("@type")) {
   "authorizationStateWaitCode" -> "Inserisci il codice ricevuto da Telegram (${auth.optJSONObject("code_info")?.optJSONObject("type")?.optString("@type")?.removePrefix("authenticationCodeType") ?: "codice"})."
   "authorizationStateWaitPassword" -> "Verifica in due passaggi. Suggerimento: ${auth.optString("password_hint")}"
@@ -139,12 +158,25 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     if (transfer) app.stopService(Intent(app, TransferService::class.java))
     _state.update { it.copy(activeDownloads = emptyMap()) }
     _state.update { it.copy(busy = false, fraction = null, progress = if (transfer) it.progress else "") }
+    if (foregroundRecheckPending && _state.value.ready) {
+     foregroundRecheckPending = false
+     onForeground()
+    }
    }
   }
  }
  fun cancel() { operation?.cancel() }
- fun connect(id: String, hash: String) = launchOperation("Accesso a Telegram…") { app.storage.folder.requireReady(); tg.start(app.vault.save(id.trim().toIntOrNull() ?: 0, hash.trim())) }
- fun reconnect() = launchOperation("Riavvio sessione…") { app.storage.folder.requireReady(); app.vault.load()?.let(tg::start) ?: error("Inserisci API ID e API hash.") }
+ fun connect(id: String, hash: String) = launchOperation("Accesso a Telegram…") {
+  app.storage.folder.requireReady()
+  val credentials = app.vault.save(id.trim().toIntOrNull() ?: 0, hash.trim())
+  _state.update { it.copy(savedTelegramAccess = SavedTelegramAccess.AVAILABLE, telegramAccessError = "") }
+  tg.start(credentials)
+ }
+ fun reconnect() = launchOperation("Verifica accesso Telegram salvato…") {
+  val credentials = readSavedTelegramAccess() ?: return@launchOperation
+  app.storage.folder.requireReady()
+  tg.start(credentials)
+ }
  fun reconfigure() = launchOperation("Chiusura accesso incompleto…") {
   tg.send(request("close"))
   withTimeout(15000) { tg.auth.first { it.optString("@type") == "authorizationStateClosed" } }
@@ -181,8 +213,14 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  fun onForeground() {
   tg.onForeground()
   updateStorageState()
-  if (_state.value.ready && !_state.value.busy && app.storage.folder.hasAccess() && _state.value.auth in listOf("notStarted", "authorizationStateClosed")) {
-   launchOperation("Apertura cartella di lavoro…") { app.storage.folder.requireReady(); refreshDownloads(); app.vault.load()?.let(tg::start) }
+  if (!_state.value.ready || _state.value.busy) { foregroundRecheckPending = true; return }
+  if (TelegramAccess.canResume(_state.value.auth, _state.value.fileAccess, _state.value.savedTelegramAccess)) {
+   launchOperation("Riapertura dell'accesso Telegram salvato…") {
+    val credentials = readSavedTelegramAccess() ?: return@launchOperation
+    app.storage.folder.requireReady()
+    refreshDownloads()
+    tg.start(credentials)
+   }
   }
  }
  private fun updateStorageState() { _state.update { it.copy(workPath = app.storage.folder.root.absolutePath, fileAccess = app.storage.folder.hasAccess()) } }
@@ -192,13 +230,13 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   app.storage.folder.save(folder)
   app.storage.folder.requireReady()
   updateStorageState(); refreshDownloads(true)
-  app.vault.load()?.let(tg::start)
+  readSavedTelegramAccess()?.let(tg::start)
  }
  fun clearCache() = launchOperation("Pulizia cache…") {
   app.storage.folder.requireReady()
   tg.closeForStorageChange()
   app.storage.clearCache()
-  app.vault.load()?.let(tg::start)
+  readSavedTelegramAccess()?.let(tg::start)
   notify("Cache eliminata. I file salvati nella cartella di lavoro restano disponibili.")
  }
  fun saveFtp(settings: FtpSettings) = launchOperation("Salvataggio FTP…") {

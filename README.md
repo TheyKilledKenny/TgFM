@@ -6,6 +6,20 @@ TgFM è un'app Android nativa per consultare gli allegati dei propri canali Tele
 
 L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. L'interfaccia è in italiano.
 
+## Correzione 1.5.1: accesso Telegram e permesso ai file
+
+La versione 1.5.0 non avviava TDLib senza autorizzazione alla cartella esterna e mostrava i campi API vuoti anche quando le credenziali erano ancora salvate. Questo stato non dimostrava una cancellazione del login. La pulizia dei vecchi allegati interni non include il vault delle credenziali né il database `telegram`.
+
+La 1.5.1 legge lo stato delle credenziali indipendentemente dal permesso ai file e distingue dati disponibili, mancanti e presenti ma non leggibili. Mostra una richiesta guidata di autorizzazione; al ritorno dalle impostazioni ritenta l’avvio con le credenziali e il database esistenti, senza migrazioni o reset. La validità effettiva della sessione viene stabilita da Telegram. Un errore della configurazione FTP non blocca la verifica dell’accesso Telegram. I dati cifrati non leggibili non vengono sostituiti e non viene rigenerata automaticamente la loro chiave.
+
+Su Android 11 o successivo, **Accesso a tutti i file** è un accesso speciale, non un normale permesso nella pagina dell’app. Usare **Concedi accesso** in TgFM oppure cercare nelle impostazioni Android **Accesso speciale → Accesso a tutti i file → TgFM** (su Samsung, in genere dal menu delle Applicazioni). Se la pagina specifica non è disponibile, l’app prova ad aprire la lista generale. Su Android 8–10 viene chiesto il permesso di archiviazione ordinario.
+
+Installare l’aggiornamento sopra l’app esistente: non disinstallare e non cancellare i dati per risolvere questo problema. L’APK mantiene application ID e certificato di firma.
+
+Versionamento concordato: gli aggiornamenti successivi restano nella serie **1.5.x**; il secondo numero non viene incrementato senza approvazione dell’utente. Questa correzione è **1.5.1**, codice Android 9.
+
+Verificati build debug, Lint (0 errori, 20 avvisi), firma invariata e permessi nel manifest dell’APK. I test della correzione coprono credenziali conservate/non leggibili, richiesta guidata, intent alternativi e tutela del vault/database. Il riutilizzo effettivo della sessione e la schermata degli accessi speciali Samsung restano da verificare sul telefono.
+
 ## Indice
 
 - [Funzionalità](#funzionalità)

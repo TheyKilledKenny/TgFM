@@ -6,6 +6,8 @@ import it.tgfm.data.Credentials
 import it.tgfm.data.WorkFolder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.drinkless.tdlib.JsonClient
 import org.json.JSONObject
 import java.io.File
@@ -36,6 +38,8 @@ class TelegramClient(private val context: Context) {
  val files = _files.asSharedFlow()
  private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 8)
  val errors = _errors.asSharedFlow()
+ private val parametersLock = Mutex()
+ private var configuredClientId = 0
  private var credentials: Credentials? = null
  private var receiving = false
  @Synchronized fun start(c: Credentials) {
@@ -83,7 +87,9 @@ class TelegramClient(private val context: Context) {
    }
   }
  }
- private suspend fun parameters() {
+ private suspend fun parameters() = parametersLock.withLock {
+  val configuringClientId = clientId
+  if (configuredClientId == configuringClientId) return@withLock
   val c = requireNotNull(credentials)
   val folder = WorkFolder(context).apply { requireReady() }
   send(request("setOption", "name" to "store_all_files_in_files_directory", "value" to request("optionValueBoolean", "value" to true)))
@@ -92,8 +98,10 @@ class TelegramClient(private val context: Context) {
    "files_directory" to File(folder.cache, "tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.0"))
+   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.1"))
+  configuredClientId = configuringClientId
   send(request("setOption", "name" to "ignore_file_names", "value" to request("optionValueBoolean", "value" to false)))
+  Unit
  }
  suspend fun send(json: JSONObject, timeoutMs: Long = 90000): JSONObject {
   check(clientId != 0) { "Configura prima l'accesso Telegram." }

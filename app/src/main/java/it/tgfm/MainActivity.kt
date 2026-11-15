@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import it.tgfm.data.ShareIntents
+import it.tgfm.data.FileAccessSettings
 import it.tgfm.ui.AppViewModel
 import it.tgfm.ui.TgfmScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -18,9 +19,12 @@ class MainActivity: ComponentActivity() {
   if (uri != null) vm.chooseWorkFolder(uri)
  }
  private val storagePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.onForeground() }
+ private val specialAccess = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.onForeground() }
  private fun storageAccess() {
   try {
-   if (android.os.Build.VERSION.SDK_INT >= 30) startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, android.net.Uri.parse("package:$packageName")))
+   if (android.os.Build.VERSION.SDK_INT >= 30) {
+    if (!FileAccessSettings.open(packageName, specialAccess::launch)) vm.notify("Apri Impostazioni Android → Applicazioni → Accesso speciale → Accesso a tutti i file → TgFM.")
+   }
    else storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
   } catch (e: ActivityNotFoundException) { vm.notify("Apri le impostazioni Android e concedi a TgFM l'accesso a tutti i file.") }
  }
@@ -36,7 +40,7 @@ class MainActivity: ComponentActivity() {
   catch (e: Exception) { vm.notify(e.message ?: "File non disponibile per la condivisione.") }
  }
  private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
- override fun onStart() { super.onStart(); vm.onForeground() }
+ override fun onResume() { super.onResume(); vm.onForeground() }
  override fun onCreate(savedInstanceState: Bundle?) {
   super.onCreate(savedInstanceState)
   setContent {
