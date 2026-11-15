@@ -4,7 +4,7 @@ Questo progetto è realizzato da Codex con la supervisione di TheyKilledKenny.
 
 Branch unico per le build debug. I sorgenti sono in `develop`; `main` e `develop` non contengono APK, suite o strumenti locali di sviluppo/test.
 
-**[Scarica TgFM 1.5.0](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.0-debug.apk)** · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
+**[Scarica TgFM 1.5.1](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.1-debug.apk)** · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
 
 Il repository è privato: aprire il link in Chrome con un account GitHub autorizzato. In alternativa aprire la pagina del file e premere **Download raw file**. Senza accesso GitHub può rispondere 404.
 
@@ -12,9 +12,22 @@ Il repository è privato: aprire il link in Chrome con un account GitHub autoriz
 
 | Versione | APK | Codice | Sorgenti |
 |---|---|---|---|
+| 1.5.1 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.1-debug.apk) · [SHA-256](TgFM-1.5.1-debug.apk.sha256) | 9 | [5c115bd](https://github.com/TheyKilledKenny/TgFM/commit/5c115bdb3daf2c2e8af6f97225ce0fd99c9aff3c) |
 | 1.5.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.0-debug.apk) · [SHA-256](TgFM-1.5.0-debug.apk.sha256) | 8 | [6a29c76](https://github.com/TheyKilledKenny/TgFM/commit/6a29c76b8d08b35bb7bf1f75f33bebe1d8a90bb3) |
 | 1.4.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.4.0-debug.apk) · [SHA-256](TgFM-1.4.0-debug.apk.sha256) | 7 | [bc15657](https://github.com/TheyKilledKenny/TgFM/commit/bc1565730f47c6d89a7ed5fdf1ed2965fb718442) |
 | 1.3.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.3.0-debug.apk) · [SHA-256](TgFM-1.3.0-debug.apk.sha256) | 6 | [d1885a5](https://github.com/TheyKilledKenny/TgFM/commit/d1885a5272cdba2543323fdda17f4b12ca43c6e7) |
+
+## Versione 1.5.1
+
+Corregge la schermata di accesso Telegram quando manca il permesso ai file. Le credenziali vengono lette indipendentemente dal permesso e distinte in disponibili, mancanti o non leggibili; non vengono cancellate o sostituite. La pulizia dei vecchi allegati non coinvolge il vault o il database Telegram.
+
+L’app presenta una richiesta guidata. Su Android 11+ aprire **Accesso speciale → Accesso a tutti i file → TgFM**, che non è fra i permessi ordinari dell’app. Al ritorno TgFM ritenta l’avvio usando credenziali e database esistenti. Se la pagina specifica manca, apre la lista generale degli accessi speciali. Corretta anche la gestione del ritorno dalle impostazioni; nessuna migrazione o rigenerazione delle chiavi salvate.
+
+Installare sopra la 1.5.0 senza disinstallare o cancellare dati. La firma è invariata. Il riutilizzo della sessione sul telefono e la validità lato Telegram restano da verificare; la schermata con campi API vuoti della 1.5.0 non dimostrava da sola la perdita dei dati.
+
+Build, Lint (0 errori, 20 avvisi), firma e manifest dell’APK verificati. Della suite già avviata, 166 test erano passati; il solo test rimasto aperto è passato nella verifica isolata finale. Non sono state ripetute le verifiche già completate. Test, log e strumenti di sviluppo restano esclusi dal repository sorgente.
+
+APK 1.5.1 SHA-256: `ad837faf1b486132ea4065517c5f8c2e300900228ed2f6d7df81bd2f0ff6da5e`. Codice Android: 9. Gli aggiornamenti rimangono **1.5.x** finché non viene approvato un cambiamento del secondo numero.
 
 ## Versione 1.5.0
 
@@ -32,7 +45,7 @@ Da provare sul telefono/account/server personale: TDLib reale durante l’invio,
 
 Android 8.0/API 26 o successivo; ARM64. Stesso certificato Android Debug della 1.4.0: installare come aggiornamento senza disinstallare, se la build presente ha questo certificato.
 
-- APK SHA-256: `6f4b4982c671787b904da99e80f1fe25f09192b3a1f95a3859849b0399022038`
+- APK 1.5.0 SHA-256: `6f4b4982c671787b904da99e80f1fe25f09192b3a1f95a3859849b0399022038`
 - Certificato SHA-256: `8c03859b96aa2ece48b3f19fec374074d5092287a53a3b34665f13af03d3304c`
 
 Pacchetti debug per test. Credenziali Telegram/FTP non incluse negli APK. Documentazione completa nel [README dei sorgenti](https://github.com/TheyKilledKenny/TgFM/blob/develop/README.md).
