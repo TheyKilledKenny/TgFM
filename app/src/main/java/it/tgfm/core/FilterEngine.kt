@@ -27,7 +27,7 @@ object FilterEngine {
   (r.template.isBlank() || templateMatches(r.template, a.name)) &&
   (r.contains.isBlank() || norm(FilterEditing.fileNameOnly(a.name)).contains(norm(r.contains)))
  fun classify(a: Attachment, rules: List<Rule>): Match {
-  val active = rules.filter { it.enabled }
+  val active = rules.filter { it.enabled && (it.channelId == null || it.channelId == a.chatId) }
   if (active.any { it.exclude && matches(it, a) }) return Match.EXCLUDED
   val include = active.filterNot { it.exclude }
   if (include.any { matches(it, a) }) return Match.CERTAIN

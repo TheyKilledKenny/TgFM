@@ -73,13 +73,22 @@ class TelegramClient(private val context: Context) {
   }
   JsonClient.send(clientId, request("getAuthorizationState").toString())
  }
+ fun onForeground() {
+  if (clientId == 0) return
+  scope.launch {
+   runCatching {
+    _auth.value = send(request("getAuthorizationState"), 10000)
+    if (_auth.value.optString("@type") == "authorizationStateReady") send(request("setOption", "name" to "online", "value" to request("optionValueBoolean", "value" to true)), 10000)
+   }
+  }
+ }
  private suspend fun parameters() {
   val c = requireNotNull(credentials)
   send(request("setTdlibParameters", "database_directory" to File(context.filesDir, "telegram").absolutePath,
    "files_directory" to File(context.filesDir, "downloads/tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.2.0"))
+   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.3.0"))
   send(request("setOption", "name" to "ignore_file_names", "value" to request("optionValueBoolean", "value" to false)))
  }
  suspend fun send(json: JSONObject, timeoutMs: Long = 90000): JSONObject {

@@ -2,6 +2,7 @@ package it.tgfm.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,8 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -27,6 +30,14 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun TgfmScreen(vm: AppViewModel, onShare: (Downloaded?) -> Unit, onSave: () -> Unit, onDownload: (Boolean) -> Unit) {
  val s by vm.state.collectAsStateWithLifecycle()
+ val listState = remember(s.tab, if (s.tab == AppTab.SELECTION.ordinal) s.channel?.id else null) { LazyListState() }
+ var selectedChannelMenu by remember { mutableStateOf(false) }
+ var selectionQuery by rememberSaveable(s.channel?.id) { mutableStateOf("") }
+ var removeFavoriteId by rememberSaveable { mutableStateOf<Long?>(null) }
+ var viewMenuExpanded by remember { mutableStateOf(false) }
+ val selectionFiles = remember(s.attachments, s.selected, s.activeRules, s.attachmentView, selectionQuery) {
+  AttachmentViews.visible(s.attachments, s.selected, s.activeRules, s.attachmentView).filter { ListSearch.matches(it.name, selectionQuery) }
+ }
  var editJson by rememberSaveable { mutableStateOf<String?>(null) }
  var confirmJson by rememberSaveable { mutableStateOf<String?>(null) }
  var confirmAction by rememberSaveable { mutableStateOf("") }
@@ -38,11 +49,11 @@ import java.util.Locale
  val visibleExamples = remember(s.attachments, exampleQuery, desiredKeys, unwantedKeys, onlyLabelledExamples) {
   ListSearch.examples(s.attachments, exampleQuery, (desiredKeys + unwantedKeys).toSet(), onlyLabelledExamples)
  }
- val visibleChannels = remember(s.channels, channelQuery) { ListSearch.channels(s.channels, channelQuery) }
+ val visibleChannels = remember(s.channels, s.favorites, channelQuery) { ListSearch.channels((s.channels + s.favorites).distinctBy { it.id }, channelQuery) }
  var reviewExamples by rememberSaveable { mutableStateOf(false) }
  val desired = s.attachments.filter { it.key in desiredKeys }
  val unwanted = s.attachments.filter { it.key in unwantedKeys }
- val learning = remember(desired, unwanted) { FilterEngine.learn(desired, unwanted) }
+ val learning = remember(desired, unwanted, s.channel?.id) { FilterEngine.learn(desired, unwanted).let { result -> result.copy(rules = result.rules.map { it.copy(channelId = s.channel?.id) }) } }
  var apiId by rememberSaveable { mutableStateOf("") }
  var apiHash by remember { mutableStateOf("") }
  var authInput by remember(s.auth) { mutableStateOf("") }
@@ -53,7 +64,7 @@ import java.util.Locale
    TopAppBar(title = { Column { Text("TgFM", fontWeight = FontWeight.Bold); Text("Telegram File Manager", style = MaterialTheme.typography.labelMedium) } })
   }, bottomBar = {
    NavigationBar { AppTab.entries.forEachIndexed { i, destination ->
-    NavigationBarItem(selected = s.tab == i, onClick = { vm.tab(i) }, icon = { Text(destination.symbol) }, label = { Text(destination.label) })
+    NavigationBarItem(selected = s.tab == i, onClick = { vm.tab(i) }, icon = { Icon(when(destination) { AppTab.SELECTION -> UiIcons.Selection; AppTab.DOWNLOADS -> UiIcons.Download; AppTab.FILTERS -> UiIcons.Filters; AppTab.SETTINGS -> UiIcons.Settings }, contentDescription = null) }, label = { Text(destination.label) })
    } }
   }) { padding ->
    Column(Modifier.padding(padding).fillMaxSize()) {
@@ -69,7 +80,7 @@ import java.util.Locale
       TextButton(onClick = vm::cancel) { Text("Annulla operazione") }
      }
     }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("main-list"), state = listState, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
      when (s.tab) {
       AppTab.SETTINGS.ordinal -> {
        item { Heading("Il tuo archivio Telegram", "Accedi con il tuo account e scegli un canale, anche privato.") }
@@ -100,17 +111,31 @@ import java.util.Locale
        }
        if (s.auth == "authorizationStateReady") {
         item { InfoCard {
-         Text("Canale selezionato", style = MaterialTheme.typography.labelLarge)
+         Text("Canale attivo", style = MaterialTheme.typography.labelMedium)
          Text(s.channel?.title ?: "Nessun canale", style = MaterialTheme.typography.titleMedium)
          Button(onClick = vm::loadChannels, enabled = !s.busy) { Text("Aggiorna elenco canali") }
         } }
         item {
          SearchField(channelQuery, { channelQuery = it }, "Cerca canale per nome")
-         Text("${visibleChannels.size}/${s.channels.size} canali", style = MaterialTheme.typography.labelMedium)
-         if (s.channels.isNotEmpty() && visibleChannels.isEmpty()) Text("Nessun canale trovato. Modifica o cancella la ricerca.")
+         Text("${s.favorites.size} preferiti · ${visibleChannels.size} canali visibili", style = MaterialTheme.typography.labelMedium)
+         Text("Spunta i preferiti. Puoi cambiare canale toccandone il nome in Selezione.", style = MaterialTheme.typography.bodySmall)
+         if (visibleChannels.isEmpty()) Text("Nessun canale trovato. Modifica o cancella la ricerca.")
         }
         items(visibleChannels, key = { "channel:${it.id}" }) { channel ->
-         OutlinedButton(onClick = { vm.chooseChannel(channel) }, enabled = !s.busy, modifier = Modifier.fillMaxWidth()) { Text((if (channel.id == s.channel?.id) "✓ " else "") + channel.title) }
+         val favorite = s.favorites.any { it.id == channel.id }
+         OutlinedCard(Modifier.fillMaxWidth()) {
+          Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+           Checkbox(favorite, { checked ->
+            if (checked) vm.addFavorite(channel)
+            else if (s.rules.any { it.channelId == channel.id }) removeFavoriteId = channel.id
+            else vm.removeFavorite(channel)
+           }, enabled = !s.busy, modifier = Modifier.testTag("favorite:${channel.id}"))
+           TextButton(onClick = { if (favorite) vm.chooseChannel(channel) else vm.addFavorite(channel) }, enabled = !s.busy, modifier = Modifier.weight(1f)) {
+            Text(channel.title, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+           }
+           if (s.channel?.id == channel.id) Text("Attivo", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+          }
+         }
         }
         item { TextButton(onClick = { confirmAction = "logout" }, enabled = !s.busy) { Text("Disconnetti account") } }
        }
@@ -125,24 +150,29 @@ import java.util.Locale
       }
       AppTab.FILTERS.ordinal -> {
        item { Heading("Regole di selezione", "I criteri di una regola si combinano. Le esclusioni prevalgono; ogni modifica richiede conferma.") }
-       item { Button(onClick = { editJson = RuleJson.encode(Rule()).toString() }, enabled = !s.busy) { Text("Nuova regola") } }
+       item { Button(onClick = { editJson = RuleJson.encode(Rule(channelId = s.channel?.id ?: s.favorites.firstOrNull()?.id)).toString() }, enabled = !s.busy && s.favorites.isNotEmpty()) { Text("Nuova regola") } }
        if (s.rules.isEmpty()) item { Text("Nessuna regola salvata. Crea un filtro oppure leggi un canale e scegli un esempio qui sotto.") }
-       items(s.rules, key = { it.id }) { rule -> InfoCard {
-        Text((if (rule.exclude) "Esclusione · " else "Inclusione · ") + rule.title, style = MaterialTheme.typography.titleMedium)
-        Text(ruleSummary(rule), style = MaterialTheme.typography.bodySmall)
-        Text(if (rule.enabled) "Attiva" else "Disattivata", color = MaterialTheme.colorScheme.primary)
-        val count = s.attachments.count { FilterEngine.classify(it, listOf(rule)) in setOf(Match.CERTAIN, Match.EXCLUDED) }
-        Text("Anteprima: $count/${s.attachments.size} allegati", style = MaterialTheme.typography.labelMedium)
-        Row {
-         TextButton(onClick = { editJson = RuleJson.encode(rule).toString() }, enabled = !s.busy) { Text("Modifica") }
-         TextButton(onClick = { confirmJson = RuleJson.encode(rule.copy(enabled = !rule.enabled)).toString(); confirmAction = "rule" }, enabled = !s.busy) { Text(if (rule.enabled) "Disattiva" else "Attiva") }
-         TextButton(onClick = { confirmJson = RuleJson.encode(rule).toString(); confirmAction = "delete" }, enabled = !s.busy) { Text("Elimina") }
+       if (s.favorites.isEmpty()) item { Text("Aggiungi almeno un canale preferito in Configura per assegnare i filtri.") }
+       items(s.rules, key = { it.id }) { rule ->
+        OutlinedCard(Modifier.fillMaxWidth().testTag("rule:${rule.id}")) {
+         Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+          Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+           Text(rule.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+           Text((s.favorites.firstOrNull { it.id == rule.channelId }?.title ?: "Da assegnare") + " · " + (if (rule.exclude) "Escludi" else "Includi"), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+           Text(ruleSummary(rule), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+          }
+          IconButton(onClick = { editJson = RuleJson.encode(rule).toString() }, enabled = !s.busy, modifier = Modifier.size(48.dp)) { Icon(UiIcons.Edit, "Modifica ${rule.title}", modifier = Modifier.size(20.dp)) }
+          IconButton(onClick = { confirmJson = RuleJson.encode(rule.copy(enabled = !rule.enabled)).toString(); confirmAction = "rule" }, enabled = !s.busy && rule.channelId != null, modifier = Modifier.size(48.dp)) {
+           Icon(if (rule.enabled) UiIcons.Pause else UiIcons.Play, if (rule.enabled) "Disattiva ${rule.title}" else "Attiva ${rule.title}", modifier = Modifier.size(20.dp), tint = if (rule.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+          IconButton(onClick = { confirmJson = RuleJson.encode(rule).toString(); confirmAction = "delete" }, enabled = !s.busy, modifier = Modifier.size(48.dp)) { Icon(UiIcons.Delete, "Elimina ${rule.title}", modifier = Modifier.size(20.dp)) }
+         }
         }
-       } }
-       item { Heading("Configura da più esempi", "Segna più file desiderati e indesiderati, poi genera le regole una sola volta. Le date diventano variabili; gli indesiderati controllano le proposte senza creare una regola per variante.") }
+       }
+       item { Heading("Configura da esempi", "Segna più file desiderati e indesiderati, poi genera le regole una sola volta. Le date diventano variabili; gli indesiderati controllano le proposte senza creare una regola per variante.") }
        item { InfoCard {
         Text("${desired.size} desiderati · ${unwanted.size} indesiderati")
-        Button(onClick = { reviewExamples = true }, enabled = !s.busy && (desired.isNotEmpty() || unwanted.isNotEmpty())) { Text("Proponi regole comuni") }
+        Button(onClick = { reviewExamples = true }, enabled = !s.busy && s.channel != null && (desired.isNotEmpty() || unwanted.isNotEmpty())) { Text("Proponi regole comuni") }
         TextButton(onClick = { desiredKeys = arrayListOf(); unwantedKeys = arrayListOf() }, enabled = !s.busy) { Text("Azzera esempi") }
        } }
        item {
@@ -154,39 +184,68 @@ import java.util.Locale
         Text("${visibleExamples.size}/${s.attachments.size} file visibili · ${desired.size + unwanted.size} esempi contrassegnati in totale", style = MaterialTheme.typography.labelMedium)
         if (visibleExamples.isEmpty()) Text(if (s.attachments.isEmpty()) "Leggi prima un canale in Selezione." else "Nessun file trovato. Modifica la ricerca o disattiva Solo esempi già contrassegnati.")
        }
-       items(visibleExamples, key = { "example:${it.key}" }) { a -> InfoCard {
-        Text(a.name); Text("${a.category.label} · .${a.extension}", style = MaterialTheme.typography.bodySmall)
-        Row {
-         TextButton(onClick = {
-          desiredKeys = ArrayList(if (a.key in desiredKeys) desiredKeys - a.key else desiredKeys + a.key)
-          unwantedKeys = ArrayList(unwantedKeys - a.key)
-         }, enabled = !s.busy) { Text(if (a.key in desiredKeys) "✓ Desiderato" else "Desiderato") }
-         TextButton(onClick = {
-          unwantedKeys = ArrayList(if (a.key in unwantedKeys) unwantedKeys - a.key else unwantedKeys + a.key)
-          desiredKeys = ArrayList(desiredKeys - a.key)
-         }, enabled = !s.busy) { Text(if (a.key in unwantedKeys) "✓ Indesiderato" else "Indesiderato") }
+       items(visibleExamples, key = { "example:${it.key}" }) { a ->
+        OutlinedCard(Modifier.fillMaxWidth()) {
+         Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+          Column(Modifier.weight(1f)) { Text(a.name, maxLines = 2, overflow = TextOverflow.Ellipsis); Text("${a.category.label} · .${a.extension}", style = MaterialTheme.typography.labelSmall) }
+          IconToggleButton(a.key in desiredKeys, {
+           desiredKeys = ArrayList(if (a.key in desiredKeys) desiredKeys - a.key else desiredKeys + a.key)
+           unwantedKeys = ArrayList(unwantedKeys - a.key)
+          }, enabled = !s.busy) { Icon(UiIcons.Check, if (a.key in desiredKeys) "Rimuovi esempio desiderato" else "Desiderato", tint = if (a.key in desiredKeys) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
+          IconToggleButton(a.key in unwantedKeys, {
+           unwantedKeys = ArrayList(if (a.key in unwantedKeys) unwantedKeys - a.key else unwantedKeys + a.key)
+           desiredKeys = ArrayList(desiredKeys - a.key)
+          }, enabled = !s.busy) { Icon(UiIcons.Close, if (a.key in unwantedKeys) "Rimuovi esempio indesiderato" else "Indesiderato", tint = if (a.key in unwantedKeys) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) }
+         }
         }
-       } }
+       }
 
       }
       AppTab.SELECTION.ordinal -> {
-       item { Heading(s.channel?.title ?: "Selezione file", "Leggi i metadati, verifica le corrispondenze e scegli cosa scaricare.") }
+       item {
+        Box {
+         TextButton(onClick = { selectedChannelMenu = true }, enabled = !s.busy && s.favorites.isNotEmpty(), contentPadding = PaddingValues(0.dp), modifier = Modifier.fillMaxWidth()) {
+          Text(s.channel?.title ?: "Scegli un preferito", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+          Icon(UiIcons.Down, "Cambia canale preferito")
+         }
+         DropdownMenu(expanded = selectedChannelMenu, onDismissRequest = { selectedChannelMenu = false }) {
+          s.favorites.forEach { favorite -> DropdownMenuItem(text = { Text(favorite.title) }, onClick = { vm.chooseChannel(favorite); selectedChannelMenu = false }) }
+         }
+        }
+        if (s.connection !in setOf("Connesso", "Aggiornamento")) Text("${s.connection} · puoi consultare gli allegati già letti.", style = MaterialTheme.typography.labelSmall)
+       }
+       item { SearchField(selectionQuery, { selectionQuery = it }, "Cerca per nome file") }
        item { Button(onClick = vm::scan, enabled = !s.busy && s.auth == "authorizationStateReady" && s.channel != null) { Text("Leggi canale") } }
-       item { Row(verticalAlignment = Alignment.CenterVertically) { Switch(s.showAll, vm::showAll); Spacer(Modifier.width(8.dp)); Text("Mostra tutti gli allegati") } }
+       item {
+        ExposedDropdownMenuBox(expanded = viewMenuExpanded, onExpandedChange = { viewMenuExpanded = it }) {
+         OutlinedTextField(value = s.attachmentView.label, onValueChange = {}, readOnly = true,
+          label = { Text("Visualizza") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = viewMenuExpanded) },
+          modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth())
+         ExposedDropdownMenu(expanded = viewMenuExpanded, onDismissRequest = { viewMenuExpanded = false }) {
+          AttachmentView.entries.forEach { view ->
+           DropdownMenuItem(text = { Text(view.label) }, onClick = { vm.attachmentView(view); viewMenuExpanded = false })
+          }
+         }
+        }
+       }
        item { Text("${s.selected.size} selezionati su ${s.attachments.size}", fontWeight = FontWeight.Bold) }
        item { Row { TextButton(onClick = { vm.selectAll(false, true) }, enabled = !s.busy) { Text("Seleziona tutti") }; TextButton(onClick = { vm.selectAll(false, false) }, enabled = !s.busy) { Text("Deseleziona tutti") } } }
-       val visible = s.attachments.filter { s.showAll || FilterEngine.classify(it, s.rules) in setOf(Match.CERTAIN, Match.POSSIBLE) }
-       if (visible.isEmpty()) item { Text(if (s.attachments.isEmpty()) "Nessun allegato letto." else "Nessuna corrispondenza. Attiva Mostra tutti per la selezione manuale.") }
-       items(visible, key = { it.key }) { a ->
-        val match = FilterEngine.classify(a, s.rules)
-        InfoCard { Row(verticalAlignment = Alignment.CenterVertically) {
+       if (selectionFiles.isEmpty()) item { Text(when {
+        s.attachments.isEmpty() -> "Nessun allegato letto."
+        selectionQuery.isNotBlank() -> "Nessun file trovato nella vista corrente. Modifica la ricerca o scegli Mostra tutti i file."
+        s.attachmentView == AttachmentView.SELECTED -> "Nessun file selezionato. Scegli un'altra vista per modificare la selezione."
+        else -> "Nessun file selezionato o affine. Scegli Mostra tutti i file per la selezione manuale."
+       }) }
+       items(selectionFiles, key = { it.key }) { a ->
+        val match = FilterEngine.classify(a, s.activeRules)
+        OutlinedCard(Modifier.fillMaxWidth()) { Row(Modifier.padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
          Checkbox(a.key in s.selected, { vm.toggle(a.key) }, enabled = !s.busy)
          Column(Modifier.weight(1f)) {
-          Text(a.name, fontWeight = FontWeight.SemiBold)
-          Text("${a.category.label} · ${a.mime.ifBlank { ".${a.extension}" }} · ${sizeLabel(a.size)}", style = MaterialTheme.typography.bodySmall)
-          Text(match.label, color = when (match) { Match.CERTAIN -> MaterialTheme.colorScheme.primary; Match.EXCLUDED -> MaterialTheme.colorScheme.error; else -> MaterialTheme.colorScheme.onSurfaceVariant }, style = MaterialTheme.typography.labelLarge)
+          Text(a.name, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+          Text("${a.category.label} · .${a.extension} · ${sizeLabel(a.size)}", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+          Text(match.label, color = when (match) { Match.CERTAIN -> MaterialTheme.colorScheme.primary; Match.EXCLUDED -> MaterialTheme.colorScheme.error; else -> MaterialTheme.colorScheme.onSurfaceVariant }, style = MaterialTheme.typography.labelMedium)
           if (a.date > 0) Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(a.date * 1000)), style = MaterialTheme.typography.labelSmall)
-          if (a.caption.isNotBlank()) Text(a.caption, maxLines = 3, style = MaterialTheme.typography.bodySmall)
+          if (a.caption.isNotBlank()) Text(a.caption, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
          }
         } }
        }
@@ -204,13 +263,18 @@ import java.util.Locale
        } }
        item { Text("Salva sposta i file nella cartella scelta e li rimuove da questo elenco. Le app destinatarie della condivisione possono imporre limiti di numero, tipo e dimensione.", style = MaterialTheme.typography.bodySmall) }
        if (s.downloads.isEmpty()) item { Text("La cartella dei download è vuota.") }
-       items(s.downloads, key = { it.path }) { file -> InfoCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-         Checkbox(file.path in s.downloadedSelection, { vm.toggle(file.path, true) }, enabled = !s.busy)
-         Column(Modifier.weight(1f)) { Text(java.io.File(file.path).name, fontWeight = FontWeight.SemiBold); Text("${file.mime.ifBlank { "File" }} · ${sizeLabel(file.size)}", style = MaterialTheme.typography.bodySmall) }
+       items(s.downloads, key = { it.path }) { file ->
+        OutlinedCard(Modifier.fillMaxWidth().testTag("download:${file.path}")) {
+         Row(Modifier.padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+          Checkbox(file.path in s.downloadedSelection, { vm.toggle(file.path, true) }, enabled = !s.busy)
+          Column(Modifier.weight(1f)) {
+           Text(java.io.File(file.path).name, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+           Text("${java.io.File(file.path).extension.uppercase().ifBlank { file.mime }} · ${sizeLabel(file.size)}", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+          }
+          IconButton(onClick = { onShare(file) }, enabled = !s.busy) { Icon(UiIcons.Eye, "Apri ${file.originalName}") }
+         }
         }
-        TextButton(onClick = { onShare(file) }, enabled = !s.busy) { Text("Apri file") }
-       } }
+       }
        if (s.retry.isNotEmpty()) item { OutlinedButton(onClick = { onDownload(true) }, enabled = !s.busy) { Text("Riprova ${s.retry.size} download non completati") } }
       }
      }
@@ -229,16 +293,27 @@ import java.util.Locale
     learning.warnings.forEach { Text(it, color = MaterialTheme.colorScheme.error) }
     if (learning.rules.isNotEmpty()) {
      Text("Anteprima dopo il salvataggio (comprese le regole già presenti)", fontWeight = FontWeight.Bold)
-     val combined = s.rules + learning.rules
+     val combined = s.activeRules + learning.rules
      val missedDesired = desired.count { FilterEngine.classify(it, combined) != Match.CERTAIN }
      val includedUnwanted = unwanted.count { FilterEngine.classify(it, combined) == Match.CERTAIN }
      if (missedDesired > 0 || includedUnwanted > 0) Text("Attenzione alle regole già salvate: $missedDesired desiderati non inclusi; $includedUnwanted indesiderati inclusi. Rivedi le vecchie regole.", color = MaterialTheme.colorScheme.error)
-     s.attachments.forEach { a -> Text("${FilterEngine.classify(a, combined).label} · ${a.name}", style = MaterialTheme.typography.bodySmall) }
+     val previewFiles = AttachmentViews.preview(s.attachments, combined)
+     Text("${previewFiles.size} file verrebbero selezionati")
+     if (previewFiles.isEmpty()) Text("Nessun file verrebbe selezionato con queste regole.")
+     previewFiles.forEach { a -> Text(a.name, style = MaterialTheme.typography.bodySmall) }
     }
     Text("I nomi senza una data riconoscibile richiedono un modello manuale. Le regole già presenti saranno conservate e quelle identiche non saranno duplicate.")
    }
   }, confirmButton = { TextButton(onClick = { vm.saveLearnedRules(learning.rules); reviewExamples = false }, enabled = !s.busy && learning.rules.isNotEmpty()) { Text("Conferma e salva regole") } }, dismissButton = { TextButton(onClick = { reviewExamples = false }) { Text("Torna agli esempi") } })
-  editJson?.let { json -> RuleEditor(RuleJson.decode(JSONObject(json)), s.attachments, onDismiss = { editJson = null }, onConfirm = { vm.saveRule(it); editJson = null }) }
+  editJson?.let { json -> RuleEditor(RuleJson.decode(JSONObject(json)), s.favorites, s.channel?.id, s.attachments, onDismiss = { editJson = null }, onConfirm = { vm.saveRule(it); editJson = null }) }
+  removeFavoriteId?.let { id ->
+   val favorite = s.favorites.firstOrNull { it.id == id }
+   val count = s.rules.count { it.channelId == id }
+   if (favorite != null) AlertDialog(onDismissRequest = { removeFavoriteId = null }, title = { Text("Rimuovere dai preferiti?") },
+    text = { Text("Rimuovendo ${favorite.title} saranno eliminati anche i suoi $count filtri. Gli altri canali e filtri resteranno invariati.") },
+    confirmButton = { TextButton(onClick = { removeFavoriteId = null; vm.removeFavorite(favorite) }, enabled = !s.busy) { Text("Rimuovi") } },
+    dismissButton = { TextButton(onClick = { removeFavoriteId = null }) { Text("Annulla") } })
+  }
   if (confirmAction.isNotEmpty()) AlertDialog(onDismissRequest = { confirmAction = "" }, title = { Text(when(confirmAction) { "download" -> "Scaricare i file selezionati?"; "logout" -> "Disconnettere Telegram?"; "delete" -> "Eliminare la regola?"; else -> "Confermare la modifica?" }) }, text = { Text(when(confirmAction) { "download" -> if (s.clearBeforeDownload) "Hai attivato Cancella i download precedenti: la cartella sarà svuotata prima di scaricare ${s.selected.size} allegati." else "Saranno scaricati ${s.selected.size} allegati. Gli altri file restano; quelli con lo stesso nome saranno cancellati all’avvio del relativo download e saranno persi in caso di errore."; "logout" -> "La sessione Telegram sarà chiusa. I filtri e i download locali resteranno disponibili."; else -> "La modifica sarà salvata e le selezioni automatiche saranno ricalcolate." }) }, confirmButton = { TextButton(onClick = {
    when(confirmAction) { "download" -> onDownload(false); "logout" -> vm.logout(); "delete" -> confirmJson?.let { vm.deleteRule(RuleJson.decode(JSONObject(it))) }; "rule" -> confirmJson?.let { vm.saveRule(RuleJson.decode(JSONObject(it))) } }
    confirmAction = ""
@@ -246,24 +321,32 @@ import java.util.Locale
  }
 }
 
-@Composable private fun Heading(title: String, subtitle: String) { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
-@Composable private fun InfoCard(content: @Composable ColumnScope.() -> Unit) { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content) } }
+@Composable private fun Heading(title: String, subtitle: String) { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+@Composable private fun InfoCard(content: @Composable ColumnScope.() -> Unit) { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content) } }
 fun sizeLabel(size: Long): String = when { size <= 0 -> "dimensione non disponibile"; size < 1024 -> "$size B"; size < 1024 * 1024 -> String.format(Locale.ITALY, "%.1f KB", size / 1024.0); else -> String.format(Locale.ITALY, "%.1f MB", size / (1024.0 * 1024)) }
 private fun authLabel(state: String) = when(state) { "authorizationStateReady" -> "Account collegato"; "authorizationStateWaitPhoneNumber" -> "Inserisci il numero di telefono"; "authorizationStateWaitCode" -> "In attesa del codice"; "authorizationStateWaitPassword" -> "Verifica in due passaggi"; "notStarted", "authorizationStateClosed" -> "Accesso da configurare"; else -> "Autenticazione in corso" }
 private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBlank() }, r.contains.takeIf { it.isNotBlank() }?.let { "Contiene: $it" }, r.extensions.takeIf { it.isNotEmpty() }?.joinToString(", "), r.mime.takeIf { it.isNotBlank() }, r.category?.label).joinToString(" · ")
 
-@Composable private fun RuleEditor(rule: Rule, examples: List<Attachment>, onDismiss: () -> Unit, onConfirm: (Rule) -> Unit) {
+@Composable private fun RuleEditor(rule: Rule, favorites: List<Channel>, activeChannelId: Long?, examples: List<Attachment>, onDismiss: () -> Unit, onConfirm: (Rule) -> Unit) {
  var title by rememberSaveable(rule.id) { mutableStateOf(rule.title) }
  var template by rememberSaveable(rule.id) { mutableStateOf(FilterEditing.nameOnly(rule.template)) }
  var contains by rememberSaveable(rule.id) { mutableStateOf(rule.contains) }
  var extensions by rememberSaveable(rule.id) { mutableStateOf(rule.extensions.joinToString(", ")) }
  var mime by rememberSaveable(rule.id) { mutableStateOf(rule.mime) }
  var exclude by rememberSaveable(rule.id) { mutableStateOf(rule.exclude) }
+ var channelId by rememberSaveable(rule.id) { mutableStateOf(rule.channelId ?: activeChannelId ?: favorites.firstOrNull()?.id) }
+ var channelMenu by remember { mutableStateOf(false) }
  var category by rememberSaveable(rule.id) { mutableStateOf(rule.category?.name ?: "") }
- val draft = rule.copy(title = title.trim(), template = template.trim(), contains = contains.trim(), extensions = extensions.split(',').map { it.trim().lowercase(Locale.ROOT).removePrefix(".") }.filter { it.isNotEmpty() }.toSet(), mime = mime.trim().lowercase(Locale.ROOT), exclude = exclude, category = Category.entries.firstOrNull { it.name == category })
- val error = FilterEngine.validate(draft)
+ val draft = rule.copy(title = title.trim(), template = template.trim(), contains = contains.trim(), extensions = extensions.split(',').map { it.trim().lowercase(Locale.ROOT).removePrefix(".") }.filter { it.isNotEmpty() }.toSet(), mime = mime.trim().lowercase(Locale.ROOT), exclude = exclude, category = Category.entries.firstOrNull { it.name == category }, channelId = channelId)
+ val error = FilterEngine.validate(draft) ?: if (favorites.none { it.id == channelId }) "Scegli un canale preferito per il filtro." else null
  AlertDialog(onDismissRequest = onDismiss, title = { Text("Modifica e conferma regola") }, text = {
   Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+   Box {
+    OutlinedButton(onClick = { channelMenu = true }, modifier = Modifier.fillMaxWidth()) { Text(favorites.firstOrNull { it.id == channelId }?.title ?: "Assegna a un preferito"); Icon(UiIcons.Down, null) }
+    DropdownMenu(expanded = channelMenu, onDismissRequest = { channelMenu = false }) {
+     favorites.forEach { favorite -> DropdownMenuItem(text = { Text(favorite.title) }, onClick = { channelId = favorite.id; channelMenu = false }) }
+    }
+   }
    OutlinedTextField(title, { title = it }, label = { Text("Nome della regola") }, singleLine = true)
    Row(verticalAlignment = Alignment.CenterVertically) { Switch(exclude, { exclude = it }); Text(if (exclude) "Esclusione esplicita" else "Inclusione") }
    OutlinedTextField(if (template.contains("{data}")) template.substringBefore("{data}") else "", { prefix ->
@@ -274,19 +357,20 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
    OutlinedTextField(contains, { contains = it }, label = { Text("Testo contenuto nel nome") })
    OutlinedTextField(extensions, { extensions = it }, label = { Text("Estensioni (vuoto = tutte)") }, placeholder = { Text("pdf, zip, epub") })
    OutlinedTextField(mime, { mime = it }, label = { Text("MIME (opzionale)") }, placeholder = { Text("application/pdf") })
-   Text("Categoria Telegram (indipendente dall’estensione)", style = MaterialTheme.typography.labelLarge)
+   Text("Categoria Telegram (indipendente dall’estensione)", style = MaterialTheme.typography.labelMedium)
    Column { (listOf("" to "Qualsiasi") + Category.entries.map { it.name to it.label }).forEach { (value, label) ->
     Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(category == value, { category = value }); Text(label) }
    } }
-   val count = examples.count { FilterEngine.classify(it, listOf(draft)) in setOf(Match.CERTAIN, Match.EXCLUDED) }
-   Text("Anteprima: $count/${examples.size} allegati. I criteri compilati devono essere tutti soddisfatti.")
+   val channelExamples = examples.filter { it.chatId == channelId }
+   val count = channelExamples.count { FilterEngine.classify(it, listOf(draft)) in setOf(Match.CERTAIN, Match.EXCLUDED) }
+   Text("Anteprima: $count/${channelExamples.size} allegati del canale. I criteri compilati devono essere tutti soddisfatti.")
    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
   }
  }, confirmButton = { TextButton(onClick = { onConfirm(draft) }, enabled = error == null) { Text("Conferma e salva") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } })
 }
 
 @Composable private fun SearchField(value: String, onValueChange: (String) -> Unit, label: String) {
- OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text(label) },
+ OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text(label) }, leadingIcon = { Icon(UiIcons.Search, null) },
   modifier = Modifier.fillMaxWidth(), singleLine = true,
   trailingIcon = { if (value.isNotEmpty()) TextButton(onClick = { onValueChange("") }) { Text("Svuota") } })
 }

@@ -10,6 +10,7 @@ import it.tgfm.TgfmApp
 import it.tgfm.TransferService
 import it.tgfm.core.*
 import it.tgfm.telegram.request
+import it.tgfm.data.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
@@ -19,14 +20,25 @@ import org.json.JSONObject
 
 data class UiState(
  val tab: Int = AppTab.SETTINGS.ordinal, val auth: String = "notStarted", val authInfo: String = "", val connection: String = "Non connesso",
- val rules: List<Rule> = emptyList(), val channels: List<Channel> = emptyList(), val channel: Channel? = null,
- val attachments: List<Attachment> = emptyList(), val selected: Set<String> = emptySet(), val showAll: Boolean = true, val clearBeforeDownload: Boolean = false,
+ val rules: List<Rule> = emptyList(), val favorites: List<Channel> = emptyList(), val channels: List<Channel> = emptyList(), val channel: Channel? = null,
+ val attachments: List<Attachment> = emptyList(), val selected: Set<String> = emptySet(), val attachmentView: AttachmentView = AttachmentView.ALL, val clearBeforeDownload: Boolean = false,
  val downloads: List<Downloaded> = emptyList(), val downloadedSelection: Set<String> = emptySet(),
  val busy: Boolean = false, val progress: String = "", val fraction: Float? = null,
  val message: String = "", val failures: List<String> = emptyList(), val retry: List<Attachment> = emptyList(),
  val activeDownloads: Map<Int, DownloadProgress> = emptyMap(),
  val ready: Boolean = false, val pendingSave: List<Downloaded> = emptyList()
-)
+) {
+ val activeRules: List<Rule> get() = if (channel == null) emptyList() else rules.filter { it.channelId == channel.id }
+ fun withConfiguration(config: ChannelConfiguration): UiState {
+  val changedChannel = channel?.id != config.channel?.id
+  val base = copy(favorites = config.favorites, channel = config.channel, rules = config.rules,
+   attachments = if (changedChannel) emptyList() else attachments,
+   selected = if (changedChannel) emptySet() else selected)
+  return if (!changedChannel && activeRules != base.activeRules) base.copy(selected = base.attachments.filter {
+   FilterEngine.classify(it, base.activeRules) == Match.CERTAIN
+  }.map { it.key }.toSet()) else base
+ }
+}
 class AppViewModel(application: Application): AndroidViewModel(application) {
  private val app = application as TgfmApp
  private val tg = app.telegram
@@ -36,16 +48,18 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  private val fileLocks = ConcurrentHashMap<Int, Mutex>()
  private var operation: Job? = null
  init {
-  viewModelScope.launch { app.preferences.rules.catch { notify("Impossibile leggere i filtri: ${it.message}") }.collect { rules -> _state.update { s -> s.copy(rules = rules) } } }
-  viewModelScope.launch { app.preferences.channel.catch { notify("Impossibile leggere il canale: ${it.message}") }.collect { channel -> _state.update { it.copy(channel = channel) }; routeForConnection() } }
-  viewModelScope.launch { app.preferences.showAll.catch { notify("Impossibile leggere le preferenze: ${it.message}") }.collect { value -> _state.update { it.copy(showAll = value) } } }
+  viewModelScope.launch { app.preferences.configuration.catch { notify("Impossibile leggere canali e filtri: ${it.message}") }.collect { config ->
+   applyConfiguration(config)
+   routeForConfiguration()
+  } }
+  viewModelScope.launch { app.preferences.attachmentView.catch { notify("Impossibile leggere le preferenze: ${it.message}") }.collect { value -> _state.update { it.copy(attachmentView = value) } } }
   viewModelScope.launch { app.preferences.clearBeforeDownload.catch { notify("Impossibile leggere la gestione download: ${it.message}") }.collect { value -> _state.update { it.copy(clearBeforeDownload = value) } } }
   viewModelScope.launch { tg.auth.collect { auth ->
    _state.update { it.copy(auth = auth.optString("@type"), authInfo = authDescription(auth)) }
-   routeForConnection()
+   routeForConfiguration()
    if (auth.optString("@type") == "authorizationStateClosed") _state.update { it.copy(channels = emptyList(), attachments = emptyList(), selected = emptySet()) }
   } }
-  viewModelScope.launch { tg.connection.collect { connection -> _state.update { it.copy(connection = connection) }; routeForConnection() } }
+  viewModelScope.launch { tg.connection.collect { connection -> _state.update { it.copy(connection = connection) } } }
   viewModelScope.launch { tg.errors.collect { notify(it) } }
   viewModelScope.launch { tg.files.collect { f ->
    _state.update { s ->
@@ -58,10 +72,10 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    }
   } }
   launchOperation("Apertura archivio…") {
-   val initialRules = app.preferences.rules.first()
-   val initialChannel = app.preferences.channel.first()
+   val initialConfig = app.preferences.configuration.first()
    val clearPrevious = app.preferences.clearBeforeDownload.first()
-   _state.update { it.copy(rules = initialRules, channel = initialChannel, clearBeforeDownload = clearPrevious) }
+   applyConfiguration(initialConfig)
+   _state.update { it.copy(clearBeforeDownload = clearPrevious) }
    val warnings = app.storage.recoverMoves()
    refreshDownloads(selectAll = true)
    app.vault.load()?.let { tg.start(it) }
@@ -79,16 +93,18 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  }
  fun notify(message: String) { _state.update { it.copy(message = message) } }
  fun dismissMessage() { _state.update { it.copy(message = "") } }
- private fun routeForConnection() {
+ private fun applyConfiguration(config: ChannelConfiguration) { _state.update { it.withConfiguration(config) } }
+ private fun routeForConfiguration() {
+  val initial = initialRoutePending && NavigationPolicy.canSelect(_state.value.auth, _state.value.channel)
+  if (initial) initialRoutePending = false
   _state.update { s ->
-   if (initialRoutePending && NavigationPolicy.canSelect(s.auth, s.connection, s.channel)) {
-    initialRoutePending = false; s.copy(tab = AppTab.SELECTION.ordinal)
-   } else s.copy(tab = NavigationPolicy.prerequisitesChanged(s.tab, s.auth, s.connection, s.channel))
+   if (initial && NavigationPolicy.canSelect(s.auth, s.channel)) s.copy(tab = AppTab.SELECTION.ordinal)
+   else s.copy(tab = NavigationPolicy.prerequisitesChanged(s.tab, s.auth, s.channel))
   }
  }
  fun tab(index: Int) {
   initialRoutePending = false
-  _state.update { it.copy(tab = NavigationPolicy.requested(index, it.auth, it.connection, it.channel)) }
+  _state.update { it.copy(tab = NavigationPolicy.requested(index, it.auth, it.channel)) }
  }
  fun clearBeforeDownload(value: Boolean) {
   if (_state.value.busy) return
@@ -97,9 +113,9 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    catch (e: Exception) { notify("Impossibile salvare la gestione download: ${e.message}") }
   }
  }
- fun showAll(value: Boolean) {
-  _state.update { it.copy(showAll = value) }
-  viewModelScope.launch { runCatching { app.preferences.saveShowAll(value) }.onFailure { notify("Impossibile salvare la preferenza: ${it.message}") } }
+ fun attachmentView(value: AttachmentView) {
+  _state.update { it.copy(attachmentView = value) }
+  viewModelScope.launch { runCatching { app.preferences.saveAttachmentView(value) }.onFailure { notify("Impossibile salvare la preferenza: ${it.message}") } }
  }
  private fun launchOperation(label: String, transfer: Boolean = false, body: suspend () -> Unit) {
   if (_state.value.busy) return
@@ -115,7 +131,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    finally {
     if (transfer) app.stopService(Intent(app, TransferService::class.java))
     _state.update { it.copy(activeDownloads = emptyMap()) }
-    _state.update { it.copy(busy = false, fraction = null) }
+    _state.update { it.copy(busy = false, fraction = null, progress = if (transfer) it.progress else "") }
    }
   }
  }
@@ -143,17 +159,22 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   _state.update { it.copy(attachments = emptyList(), selected = emptySet(), channels = emptyList(), channel = null, retry = emptyList()) }
  }
  fun loadChannels() = launchOperation("Lettura canali…") {
-  val channels = tg.channels(); _state.update { it.copy(channels = channels) }
+  val channels = tg.channels(); _state.update { it.copy(channels = channels) }; app.preferences.updateFavoriteTitles(channels)
   if (channels.isEmpty()) notify("Nessun canale accessibile. Unisciti al canale dall'app Telegram, poi aggiorna.")
  }
  fun chooseChannel(channel: Channel) = launchOperation("Salvataggio canale…") {
-  app.preferences.saveChannel(channel)
-  _state.update { it.copy(channel = channel, attachments = emptyList(), selected = emptySet()) }; routeForConnection()
+  applyConfiguration(app.preferences.selectFavorite(channel.id)); routeForConfiguration()
  }
+ fun addFavorite(channel: Channel) {
+  initialRoutePending = false
+  launchOperation("Aggiunta preferito…") { applyConfiguration(app.preferences.addFavorite(channel)) }
+ }
+ fun removeFavorite(channel: Channel) = launchOperation("Rimozione preferito…") { applyConfiguration(app.preferences.removeFavorite(channel.id)); routeForConfiguration() }
+ fun onForeground() { tg.onForeground() }
  fun scan() = launchOperation("Lettura metadati…") {
   val channel = requireNotNull(_state.value.channel) { "Seleziona un canale in Configurazione." }
   val files = tg.attachments(channel.id) { count -> _state.update { it.copy(progress = "$count allegati individuati…") } }
-  _state.update { s -> s.copy(attachments = files, selected = files.filter { FilterEngine.classify(it, s.rules) == Match.CERTAIN }.map { it.key }.toSet()) }
+  _state.update { s -> s.copy(attachments = files, selected = files.filter { FilterEngine.classify(it, s.activeRules) == Match.CERTAIN }.map { it.key }.toSet()) }
   notify(if (files.isEmpty()) "Nessun allegato disponibile." else "${files.size} allegati letti; ${_state.value.selected.size} corrispondenze certe selezionate.")
  }
  fun toggle(key: String, local: Boolean = false) { if (_state.value.busy) return; _state.update { s ->
@@ -165,24 +186,25 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  } }
  fun saveRule(rule: Rule) = launchOperation("Salvataggio filtro…") {
   FilterEngine.validate(rule)?.let { error(it) }
+  check(_state.value.favorites.any { it.id == rule.channelId }) { "Assegna il filtro a un canale preferito." }
   val rules = _state.value.rules.filterNot { it.id == rule.id } + rule
-  app.preferences.saveRules(rules); reclassify(rules)
+  applyConfiguration(app.preferences.saveRules(rules))
  }
  fun saveLearnedRules(drafts: List<Rule>) = launchOperation("Salvataggio regole comuni…") {
   check(drafts.isNotEmpty()) { "Nessuna regola da salvare." }
   val rules = _state.value.rules.toMutableList()
   for (rule in drafts) {
    FilterEngine.validate(rule)?.let { error(it) }
+   check(_state.value.favorites.any { it.id == rule.channelId }) { "Assegna il filtro a un canale preferito." }
    if (rules.none { FilterEngine.sameCriteria(it, rule) }) rules += rule
   }
   val added = rules.size - _state.value.rules.size
-  app.preferences.saveRules(rules); reclassify(rules)
+  applyConfiguration(app.preferences.saveRules(rules))
   notify("$added regole aggiunte. Le regole già presenti non sono state duplicate.")
  }
  fun deleteRule(rule: Rule) = launchOperation("Eliminazione filtro…") {
-  val rules = _state.value.rules.filterNot { it.id == rule.id }; app.preferences.saveRules(rules); reclassify(rules)
+  val rules = _state.value.rules.filterNot { it.id == rule.id }; applyConfiguration(app.preferences.saveRules(rules))
  }
- private fun reclassify(rules: List<Rule>) { _state.update { s -> s.copy(rules = rules, selected = s.attachments.filter { FilterEngine.classify(it, rules) == Match.CERTAIN }.map { it.key }.toSet()) } }
  fun download(retryOnly: Boolean = false) {
   val files = if (retryOnly) _state.value.retry else _state.value.attachments.filter { it.key in _state.value.selected }
   if (files.isEmpty()) { notify("Seleziona almeno un allegato."); return }

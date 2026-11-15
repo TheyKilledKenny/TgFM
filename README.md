@@ -26,10 +26,10 @@ L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonom
 
 - Accesso Telegram tramite numero telefonico, codice e verifica in due passaggi, quando richiesta.
 - Conservazione locale della sessione e disconnessione volontaria.
-- Selezione e ricerca di un canale accessibile all'account, anche privato o archiviato.
+- Selezione di più canali preferiti, anche privati o archiviati, con ricerca per nome e cambio rapido del canale attivo.
 - Lettura paginata dei metadati degli allegati, senza scaricarne preventivamente i contenuti.
 - Riconoscimento di documenti, immagini, video, audio, animazioni e sticker scaricabili.
-- Regole persistenti sul nome, sulla data variabile, sulle estensioni, sul MIME e sulla categoria Telegram.
+- Regole persistenti assegnate a un canale preferito, sul nome, sulla data variabile, sulle estensioni, sul MIME e sulla categoria Telegram.
 - Proposte di regole comuni da più esempi desiderati e indesiderati, con anteprima e conferma.
 - Selezione manuale degli allegati prima del download.
 - Fino a **quattro download paralleli**, avanzamento individuale, annullamento e ripetizione degli insuccessi.
@@ -138,7 +138,7 @@ zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk
 
 2. Aprire **Configura** e inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
 3. Inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib.
-4. Premere **Aggiorna elenco canali**, cercare il canale per nome e selezionarlo. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
+4. Premere **Aggiorna elenco canali**, cercare i canali per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
 
 La registrazione di un nuovo account e gli eventuali passaggi di acquisto richiesti da Telegram devono essere completati nell'app ufficiale. La sessione viene riutilizzata agli avvii successivi finché resta valida.
 
@@ -148,19 +148,29 @@ Il menu segue questo ordine:
 
 | Area | Operazioni principali |
 |---|---|
-| **Selezione** | Leggere il canale, verificare le corrispondenze, scegliere gli allegati e avviare i download |
+| **Selezione** | Cambiare canale fra i preferiti toccandone il nome, leggere gli allegati, cercarli e scegliere i download |
 | **Download** | Seguire i trasferimenti, aprire i file completati, selezionare, condividere e salvare |
-| **Filtri** | Creare, modificare, attivare o eliminare regole; configurarle da esempi ricercabili |
-| **Configura** | Gestire accesso, canale e politica sui download precedenti |
+| **Filtri** | Assegnare regole ai preferiti, modificarle con azioni a icone e configurarle da esempi ricercabili |
+| **Configura** | Gestire accesso, canali preferiti e politica sui download precedenti |
 
-All'avvio, l'app apre Selezione quando sessione, connessione Telegram e canale sono pronti; altrimenti apre Configura. La perdita dei prerequisiti porta a Configura. Download e Filtri restano accessibili manualmente per le funzioni locali.
+All'avvio, l'app apre Selezione quando sessione e canale preferito sono pronti; altrimenti apre Configura. Una riconnessione temporanea di Telegram, anche dopo il ritorno dal background, non blocca Selezione: è possibile consultare i metadati già letti mentre la connessione viene ripristinata. Sessione non valida o assenza del canale attivo richiedono Configura. Download e Filtri restano accessibili manualmente per le funzioni locali.
 
 Flusso abituale:
 
-1. In Selezione, premere **Leggi canale**.
-2. Verificare i risultati, usando **Mostra tutti gli allegati** per includere anche quelli non corrispondenti.
+1. In Selezione, toccare il nome del canale per sceglierne uno fra i preferiti, poi premere **Leggi canale**. La ricerca per nome file si combina con la vista corrente senza perdere le checkbox dei file nascosti.
+2. Verificare i risultati, scegliendo **Mostra solo selezionati**, **Mostra selezionati e Affini** oppure **Mostra tutti i file**. I selezionati sono sempre in alto, anche se selezionati manualmente; Affini indica le corrispondenze Possibili. La vista scelta viene conservata.
 3. Modificare le checkbox e premere **Scarica selezionati**.
 4. In Download, attendere il completamento e scegliere i file da condividere o salvare.
+
+## Canali preferiti
+
+In Configura le checkbox aggiungono o rimuovono i preferiti. Il canale attivo può essere cambiato toccandone il nome in Selezione. Cambiare canale azzera i risultati precedenti, che vanno riletti con Leggi canale; si applicano soltanto i filtri assegnati al canale attivo.
+
+Ogni regola nuova o modificata deve essere assegnata a un preferito nell'editor. Le proposte da esempi sono assegnate al canale dal quale sono stati letti gli allegati. Regole uguali su canali diversi rimangono distinte.
+
+Rimuovere un preferito cancella anche i filtri associati a quel canale. Se ci sono filtri, compare una sola conferma con il loro numero; annullandola non cambia nulla. Senza filtri associati la rimozione è immediata. I file già scaricati non vengono eliminati. Se si rimuove il canale attivo viene scelto il primo preferito rimasto; senza preferiti si apre Configura.
+
+All'aggiornamento, il vecchio canale selezionato diventa un preferito e riceve le regole precedenti. Eventuali regole senza un vecchio canale vengono conservate come Da assegnare e possono essere associate dall'editor.
 
 ## Configurazione dei filtri
 
@@ -218,12 +228,12 @@ Le regole precedenti con un suffisso come `.pdf` nel modello vengono interpretat
 
 Una variante indesiderata può comparire come Possibile senza essere scaricata automaticamente. L'utente può selezionare manualmente anche un escluso: la scelta vale soltanto per l'operazione corrente e non cambia i filtri. La conferma di una modifica alle regole ricalcola le selezioni automatiche.
 
-### Configurazione da più esempi
+### Configura da esempi
 
 1. Dopo aver letto un canale, aprire Filtri e cercare i nomi desiderati.
 2. Contrassegnare più file come **Desiderato** o **Indesiderato**. Le etichette restano assegnate anche quando la ricerca nasconde i file; è disponibile **Solo esempi già contrassegnati**.
 3. Premere **Proponi regole comuni**.
-4. Verificare modelli, conteggi, anteprima e avvisi, quindi confermare.
+4. Verificare modelli, conteggi, anteprima e avvisi, quindi confermare. L’anteprima elenca soltanto i file che verrebbero selezionati automaticamente, senza Possibili, Non corrispondenti o Esclusi.
 
 Le date vengono generalizzate conservando la radice completa. Cinquanta numeri della stessa testata possono produrre un'unica regola, anziché cinquanta nomi esatti. Con esempi positivi, i negativi vincolano le proposte senza generare una blacklist per ogni variante. Proposte ambigue vengono segnalate e omesse. Con soli esempi negativi possono essere proposte esclusioni raggruppate.
 
@@ -251,6 +261,8 @@ Dopo il completamento i file sono inizialmente tutti selezionati. Dopo una termi
 ### Condividi
 
 Usa Android Sharesheet con `ACTION_SEND` o `ACTION_SEND_MULTIPLE`, URI `content://` del FileProvider e permessi temporanei di sola lettura. Per formati misti viene usato `*/*`.
+
+Le righe dei download sono compatte: l'icona a forma di occhio a destra apre il file, senza una riga aggiuntiva per il pulsante Apri.
 
 L'utente sceglie l'app destinataria, il gruppo o contatto e conferma l'invio. Limiti di numero, formato e dimensione dipendono dalla destinazione. Il ritorno a TgFM non certifica che il destinatario abbia effettivamente ricevuto i file.
 
@@ -321,7 +333,7 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 
 ## Verifiche e limiti
 
-Durante lo sviluppo della versione 1.2.0 sono passati 99 test locali JUnit/Robolectric, inclusi filtri, navigazione, concorrenza, sostituzione dei file, persistenza e condivisione Android. La build debug, la firma, l'allineamento delle librerie e Android Lint sono stati verificati. Le suite e i rapporti di sviluppo non sono inclusi nel repository; il controllo riproducibile disponibile qui è `lintDebug`, oltre alla build dell'APK.
+Durante lo sviluppo della versione 1.3.0 sono passati 129 test locali JUnit/Robolectric/Compose, inclusi preferiti, migrazione, isolamento dei filtri per canale, riconnessione, navigazione, righe compatte, concorrenza, sostituzione dei file, persistenza e condivisione Android. La build debug, la firma, l'allineamento delle librerie e Android Lint sono stati verificati. Le suite e i rapporti di sviluppo non sono inclusi nel repository; il controllo riproducibile disponibile qui è `lintDebug`, oltre alla build dell'APK.
 
 Rimangono da verificare sul dispositivo fisico e con account reali:
 
@@ -331,7 +343,7 @@ Rimangono da verificare sul dispositivo fisico e con account reali:
 - Condivisione effettiva con WhatsApp e altri destinatari.
 - Spostamenti, collisioni e recupero degli errori con il provider SAF Samsung.
 
-Sono attualmente supportati un account e un canale selezionato. Una cartella predefinita di salvataggio e l'associazione di filtri a più canali sono possibili evoluzioni, non funzionalità disponibili in questa versione.
+Sono supportati un account, più canali preferiti con filtri associati e un canale attivo alla volta. Scansione simultanea di più canali, cartella predefinita e download avviato direttamente da Condividi/Salva non sono presenti in questa versione.
 
 ## Licenze di terze parti
 

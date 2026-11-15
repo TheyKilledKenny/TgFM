@@ -21,6 +21,7 @@ class MainActivity: ComponentActivity() {
   vm.save(uri)
  }
  private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+ override fun onStart() { super.onStart(); vm.onForeground() }
  override fun onCreate(savedInstanceState: Bundle?) {
   super.onCreate(savedInstanceState)
   setContent {
