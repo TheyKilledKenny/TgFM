@@ -3,7 +3,6 @@ package it.tgfm.data
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
-import androidx.core.content.FileProvider
 import it.tgfm.core.Downloaded
 import it.tgfm.core.commonMime
 import java.io.File
@@ -13,7 +12,7 @@ object ShareIntents {
   require(files.isNotEmpty()) { "Seleziona almeno un file." }
   val uris = files.map { file ->
    check(File(file.path).isFile) { "File non disponibile: ${file.originalName}" }
-   FileProvider.getUriForFile(context, context.packageName + ".files", File(file.path))
+   WorkFileProvider.uri(context, File(file.path))
   }
   return Intent(if (open) Intent.ACTION_VIEW else if (uris.size == 1) Intent.ACTION_SEND else Intent.ACTION_SEND_MULTIPLE).apply {
    type = commonMime(files.map { it.mime })

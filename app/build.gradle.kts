@@ -9,7 +9,7 @@ android {
  ndkVersion = "27.2.12479018"
  defaultConfig {
   applicationId = "it.tgfm"; minSdk = 26; targetSdk = 35
-  versionCode = 7; versionName = "1.4.0"
+  versionCode = 8; versionName = "1.5.0"
   ndk { abiFilters += "arm64-v8a" }
  }
  buildFeatures { compose = true }
@@ -24,6 +24,7 @@ val verifyTdlib by tasks.registering {
 }
 tasks.named("preBuild") { dependsOn(verifyTdlib) }
 dependencies {
+ implementation("commons-net:commons-net:3.12.0")
  implementation(platform("androidx.compose:compose-bom:2025.11.00"))
  implementation("androidx.compose.material3:material3")
  implementation("androidx.activity:activity-compose:1.11.0")

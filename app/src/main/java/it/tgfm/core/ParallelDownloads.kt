@@ -12,6 +12,6 @@ object ParallelDownloads {
   Unit
  }
 }
-data class DownloadProgress(val name: String, val bytes: Long = 0, val size: Long = 0) {
+data class DownloadProgress(val name: String, val bytes: Long = 0, val size: Long = 0, val uploaded: Long? = null) {
  val fraction: Float? get() = if (size > 0) (bytes.toFloat() / size).coerceIn(0f, 1f) else null
 }

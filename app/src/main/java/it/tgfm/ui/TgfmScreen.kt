@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.tgfm.core.*
 import it.tgfm.data.RuleJson
+import it.tgfm.data.FtpSettings
 import org.json.JSONObject
 import java.text.DateFormat
 import java.util.Date
@@ -31,7 +32,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun TgfmScreen(vm: AppViewModel, onShare: (Downloaded?) -> Unit, onSave: () -> Unit, onDownload: (Boolean) -> Unit) {
+@Composable fun TgfmScreen(vm: AppViewModel, onShare: (Downloaded?) -> Unit, onChooseFolder: () -> Unit, onStorageAccess: () -> Unit, onSelectionShare: () -> Unit, onFtp: (Boolean) -> Unit, onDownload: (Boolean) -> Unit) {
  val s by vm.state.collectAsStateWithLifecycle()
  val listState = remember(s.tab, if (s.tab == AppTab.SELECTION.ordinal) s.channel?.id else null) { LazyListState() }
  var selectedChannelMenu by remember { mutableStateOf(false) }
@@ -43,6 +44,8 @@ import java.time.format.DateTimeFormatter
  }
  var editJson by rememberSaveable { mutableStateOf<String?>(null) }
  var confirmJson by rememberSaveable { mutableStateOf<String?>(null) }
+ var deleteFiles by remember { mutableStateOf<List<Downloaded>?>(null) }
+ var editFtp by remember { mutableStateOf(false) }
  var confirmAction by rememberSaveable { mutableStateOf("") }
  var desiredKeys by rememberSaveable { mutableStateOf<List<String>>(arrayListOf()) }
  var unwantedKeys by rememberSaveable { mutableStateOf<List<String>>(arrayListOf()) }
@@ -78,6 +81,7 @@ import java.time.format.DateTimeFormatter
       s.activeDownloads.values.forEach { active ->
        Text(active.name, style = MaterialTheme.typography.labelMedium, maxLines = 1)
        Text("${sizeLabel(active.bytes)} / ${sizeLabel(active.size)}", style = MaterialTheme.typography.labelSmall)
+       active.uploaded?.let { Text("Inviati a FTP: ${sizeLabel(it)}", style = MaterialTheme.typography.labelSmall) }
        active.fraction?.let { LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth()) }
       }
       TextButton(onClick = vm::cancel) { Text("Annulla operazione") }
@@ -88,6 +92,33 @@ import java.time.format.DateTimeFormatter
       AppTab.SETTINGS.ordinal -> {
        item { Heading("Il tuo archivio Telegram", "Accedi con il tuo account e scegli un canale, anche privato.") }
        item { InfoCard { Text("Stato · ${s.connection}"); Text(authLabel(s.auth), fontWeight = FontWeight.SemiBold) } }
+       item { InfoCard {
+        Text("Cartella di lavoro", style = MaterialTheme.typography.titleMedium)
+        Text(s.workPath, style = MaterialTheme.typography.bodySmall)
+        if (!s.fileAccess) {
+         Text("TDLib deve poter scrivere direttamente nella cartella esterna. Concedi l'accesso ai file nelle impostazioni Android.", style = MaterialTheme.typography.bodySmall)
+         Button(onClick = onStorageAccess, enabled = !s.busy) { Text("Concedi accesso ai file") }
+        }
+        OutlinedButton(onClick = onChooseFolder, enabled = !s.busy && s.fileAccess) { Text("Scegli cartella") }
+        Text("I nuovi file e la cache saranno salvati qui. Cambiare cartella non sposta né cancella i file della precedente.", style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+         Switch(s.clearBeforeDownload, vm::clearBeforeDownload, enabled = !s.busy)
+         Text("Cancella i download precedenti", modifier = Modifier.weight(1f))
+        }
+        Text(if (s.clearBeforeDownload) "Salva e Condividi eliminano prima i file gestiti da TgFM nella cartella attuale. FTP non svuota la cartella." else "I file già salvati per lo stesso allegato sono riutilizzati. Gli altri omonimi vengono sovrascritti all'avvio del download; in caso di errore la copia precedente è persa.", style = MaterialTheme.typography.bodySmall)
+        TextButton(onClick = { confirmAction = "cache" }, enabled = !s.busy && s.fileAccess) { Text("Svuota cache temporanea") }
+       } }
+       item { InfoCard {
+        Text("FTP", style = MaterialTheme.typography.titleMedium)
+        Text(if (s.ftp.host.isBlank()) "Nessun server configurato" else "${if (s.ftp.tls) "FTPS" else "FTP"} · ${s.ftp.host}:${s.ftp.port}${s.ftp.directory}", style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+         Checkbox(s.ftp.keep, { vm.saveFtp(s.ftp.copy(keep = it)) }, enabled = !s.busy && s.ftp.host.isNotBlank())
+         Text("Conserva al termine")
+        }
+        Text(if (s.ftp.keep) "I file restano nella cartella di lavoro. Fino a 4 trasferimenti contemporanei." else "Un file alla volta. Dopo la conferma FTP viene eliminata la copia locale, anche se era già presente in Download. In caso di errore resta disponibile o nella cache.", style = MaterialTheme.typography.bodySmall)
+        Row { OutlinedButton(onClick = { editFtp = true }, enabled = !s.busy) { Text("Configura FTP") }
+         TextButton(onClick = vm::testFtp, enabled = !s.busy && s.ftp.host.isNotBlank()) { Text("Verifica accesso") } }
+       } }
        if (s.auth in listOf("notStarted", "authorizationStateClosed", "authorizationStateWaitTdlibParameters")) {
         item { InfoCard {
          Text("Credenziali dell'app Telegram", style = MaterialTheme.typography.titleMedium)
@@ -142,14 +173,7 @@ import java.time.format.DateTimeFormatter
         }
         item { TextButton(onClick = { confirmAction = "logout" }, enabled = !s.busy) { Text("Disconnetti account") } }
        }
-       item { InfoCard { Text("Archivio privato", style = MaterialTheme.typography.titleMedium); Row(verticalAlignment = Alignment.CenterVertically) {
-         Switch(s.clearBeforeDownload, vm::clearBeforeDownload, enabled = !s.busy)
-         Text("Cancella i download precedenti", modifier = Modifier.weight(1f))
-        }
-        Text(if (s.clearBeforeDownload) "Prima di un nuovo download la cartella viene svuotata." else "Mantieni i file precedenti. I file con lo stesso nome vengono sovrascritti all’avvio del relativo download; in caso di errore il file precedente è perso.", style = MaterialTheme.typography.bodyMedium)
-        Text("Salva sposta i file selezionati; Condividi concede soltanto accesso temporaneo.", style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = vm::recover, enabled = !s.busy) { Text("Recupera trasferimento interrotto") }
-       } }
+
       }
       AppTab.FILTERS.ordinal -> {
        item { Heading("Regole di selezione", "I criteri di una regola si combinano. Le esclusioni prevalgono; ogni modifica richiede conferma.") }
@@ -256,19 +280,25 @@ import java.time.format.DateTimeFormatter
          }
         } }
        }
-       item { Button(onClick = { confirmAction = "download" }, enabled = !s.busy && s.selected.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Scarica selezionati (${s.selected.size})") } }
+       item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = { confirmAction = "download" }, enabled = !s.busy && s.selected.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Salva") }
+        Button(onClick = { confirmAction = "share" }, enabled = !s.busy && s.selected.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Condividi") }
+       } }
+       item { OutlinedButton(onClick = { confirmAction = "ftp-selection" }, enabled = !s.busy && s.selected.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Salva su FTP") } }
        item { Text("La selezione manuale vale solo per questa operazione, anche per i file esclusi. Non modifica i filtri.", style = MaterialTheme.typography.bodySmall) }
       }
       AppTab.DOWNLOADS.ordinal -> {
-       item { Heading("Pronti da usare", "La stessa selezione viene usata per Condividi e Salva.") }
+       item { Heading("Pronti da usare", "File nella cartella di lavoro. Seleziona quelli da condividere o inviare a FTP.") }
+       item { TextButton(onClick = vm::refreshLocalFiles, enabled = !s.busy) { Text("Aggiorna elenco file") } }
        item { Text("${s.downloadedSelection.size}/${s.downloads.size} selezionati · ${sizeLabel(s.downloads.filter { it.path in s.downloadedSelection }.sumOf { it.size })}", fontWeight = FontWeight.Bold) }
        if (!s.busy && s.progress.isNotBlank()) item { Text(s.progress, style = MaterialTheme.typography.bodySmall) }
        item { Row { TextButton(onClick = { vm.selectAll(true, true) }, enabled = !s.busy) { Text("Seleziona tutti") }; TextButton(onClick = { vm.selectAll(true, false) }, enabled = !s.busy) { Text("Deseleziona tutti") } } }
        item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Button(onClick = { onShare(null) }, enabled = !s.busy && s.downloadedSelection.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Condividi") }
-        Button(onClick = onSave, enabled = !s.busy && s.downloadedSelection.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Salva") }
+        OutlinedButton(onClick = { confirmAction = "ftp-downloads" }, enabled = !s.busy && s.downloadedSelection.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("Salva su FTP") }
+        IconButton(onClick = { deleteFiles = vm.selectedDownloads() }, enabled = !s.busy && s.downloadedSelection.isNotEmpty()) { Icon(UiIcons.Delete, "Elimina selezionati", tint = MaterialTheme.colorScheme.error) }
        } }
-       item { Text("Salva sposta i file nella cartella scelta e li rimuove da questo elenco. Le app destinatarie della condivisione possono imporre limiti di numero, tipo e dimensione.", style = MaterialTheme.typography.bodySmall) }
+       item { Text("Condividi concede accesso temporaneo ai file. Le app destinatarie possono imporre limiti di numero, tipo e dimensione.", style = MaterialTheme.typography.bodySmall) }
        if (s.downloads.isEmpty()) item { Text("La cartella dei download è vuota.") }
        items(s.downloads, key = { it.path }) { file ->
         OutlinedCard(Modifier.fillMaxWidth().testTag("download:${file.path}")) {
@@ -279,6 +309,7 @@ import java.time.format.DateTimeFormatter
            Text("${java.io.File(file.path).extension.uppercase().ifBlank { file.mime }} · ${sizeLabel(file.size)}", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
           }
           IconButton(onClick = { onShare(file) }, enabled = !s.busy) { Icon(UiIcons.Eye, "Apri ${file.originalName}") }
+          IconButton(onClick = { deleteFiles = listOf(file) }, enabled = !s.busy) { Icon(UiIcons.Delete, "Elimina ${file.originalName}", tint = MaterialTheme.colorScheme.error) }
          }
         }
        }
@@ -321,8 +352,22 @@ import java.time.format.DateTimeFormatter
     confirmButton = { TextButton(onClick = { removeFavoriteId = null; vm.removeFavorite(favorite) }, enabled = !s.busy) { Text("Rimuovi") } },
     dismissButton = { TextButton(onClick = { removeFavoriteId = null }) { Text("Annulla") } })
   }
-  if (confirmAction.isNotEmpty()) AlertDialog(onDismissRequest = { confirmAction = "" }, title = { Text(when(confirmAction) { "download" -> "Scaricare i file selezionati?"; "logout" -> "Disconnettere Telegram?"; "delete" -> "Eliminare la regola?"; else -> "Confermare la modifica?" }) }, text = { Text(when(confirmAction) { "download" -> if (s.clearBeforeDownload) "Hai attivato Cancella i download precedenti: la cartella sarà svuotata prima di scaricare ${s.selected.size} allegati." else "Saranno scaricati ${s.selected.size} allegati. Gli altri file restano; quelli con lo stesso nome saranno cancellati all’avvio del relativo download e saranno persi in caso di errore."; "logout" -> "La sessione Telegram sarà chiusa. I filtri e i download locali resteranno disponibili."; else -> "La modifica sarà salvata e le selezioni automatiche saranno ricalcolate." }) }, confirmButton = { TextButton(onClick = {
-   when(confirmAction) { "download" -> onDownload(false); "logout" -> vm.logout(); "delete" -> confirmJson?.let { vm.deleteRule(RuleJson.decode(JSONObject(it))) }; "rule" -> confirmJson?.let { vm.saveRule(RuleJson.decode(JSONObject(it))) } }
+  if (editFtp) FtpEditor(s.ftp, onDismiss = { editFtp = false }, onConfirm = { vm.saveFtp(it); editFtp = false })
+  deleteFiles?.let { files -> AlertDialog(onDismissRequest = { deleteFiles = null }, title = { Text("Eliminare ${files.size} file locali?") },
+   text = { Text("Saranno eliminati dalla cartella di lavoro. Le copie su Telegram o FTP non vengono modificate.") },
+   confirmButton = { TextButton(onClick = { vm.deleteDownloads(files); deleteFiles = null }, enabled = !s.busy) { Text("Elimina", color = MaterialTheme.colorScheme.error) } },
+   dismissButton = { TextButton(onClick = { deleteFiles = null }) { Text("Annulla") } }) }
+  if (confirmAction.isNotEmpty()) AlertDialog(onDismissRequest = { confirmAction = "" }, title = { Text(when(confirmAction) {
+   "download" -> "Salvare i file selezionati?"; "share" -> "Salvare e condividere i file?"; "cache" -> "Svuotare la cache?"
+   "ftp-selection", "ftp-downloads" -> "Inviare i file a FTP?"; "logout" -> "Disconnettere Telegram?"; "delete" -> "Eliminare la regola?"; else -> "Confermare la modifica?"
+  }) }, text = { Text(when(confirmAction) {
+   "download", "share" -> (if (s.clearBeforeDownload) "I precedenti file gestiti da TgFM saranno eliminati prima del salvataggio." else "I file già disponibili saranno riutilizzati. Un omonimo sostituito sarà perso anche se il nuovo download fallisce.") + if (confirmAction == "share") " Dopo il salvataggio si aprirà la condivisione Android." else ""
+   "ftp-selection", "ftp-downloads" -> "I file omonimi sul server vengono sovrascritti; un'interruzione può lasciare un file remoto incompleto. " + if (s.ftp.keep) "I file locali saranno conservati." else "Dopo la conferma FTP le copie locali saranno eliminate. In caso di errore non saranno eliminate automaticamente."
+   "cache" -> "Elimina i file temporanei TDLib, compresi quelli rimasti da trasferimenti interrotti. I file salvati in Download restano."
+   "logout" -> "La sessione Telegram sarà chiusa. I filtri e i download locali resteranno disponibili."
+   else -> "La modifica sarà salvata e le selezioni automatiche saranno ricalcolate."
+  }) }, confirmButton = { TextButton(onClick = {
+   when(confirmAction) { "download" -> onDownload(false); "share" -> onSelectionShare(); "ftp-selection" -> onFtp(false); "ftp-downloads" -> onFtp(true); "cache" -> vm.clearCache(); "logout" -> vm.logout(); "delete" -> confirmJson?.let { vm.deleteRule(RuleJson.decode(JSONObject(it))) }; "rule" -> confirmJson?.let { vm.saveRule(RuleJson.decode(JSONObject(it))) } }
    confirmAction = ""
   }, enabled = !s.busy) { Text("Conferma") } }, dismissButton = { TextButton(onClick = { confirmAction = "" }) { Text("Annulla") } })
  }
@@ -422,4 +467,30 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
    }, enabled = dateState.selectedDateMillis != null) { Text("Conferma data") }
   }, dismissButton = { TextButton(onClick = { picker = null }) { Text("Annulla") } }) { DatePicker(dateState) }
  } }
+}
+
+@Composable private fun FtpEditor(settings: FtpSettings, onDismiss: () -> Unit, onConfirm: (FtpSettings) -> Unit) {
+ var host by remember { mutableStateOf(settings.host) }
+ var port by remember { mutableStateOf(settings.port.toString()) }
+ var user by remember { mutableStateOf(settings.user) }
+ var password by remember { mutableStateOf(settings.password) }
+ var directory by remember { mutableStateOf(settings.directory) }
+ var tls by remember { mutableStateOf(settings.tls) }
+ var keep by remember { mutableStateOf(settings.keep) }
+ val draft = FtpSettings(host.trim(), port.toIntOrNull() ?: 0, user.trim(), password, directory.trim(), tls, keep)
+ val error = runCatching { draft.validate() }.exceptionOrNull()?.message
+ AlertDialog(onDismissRequest = onDismiss, title = { Text("Configura FTP") }, text = {
+  Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+   OutlinedTextField(host, { host = it }, label = { Text("Host") }, singleLine = true)
+   OutlinedTextField(port, { port = it }, label = { Text("Porta") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+   OutlinedTextField(user, { user = it }, label = { Text("Utente") }, singleLine = true)
+   OutlinedTextField(password, { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+   OutlinedTextField(directory, { directory = it }, label = { Text("Cartella sul server") }, singleLine = true)
+   Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(tls, { tls = it }); Text("FTPS esplicito (TLS)") }
+   Text(if (tls) "Connessione cifrata; il certificato del server deve essere valido." else "FTP invia credenziali e file senza cifratura. Usa FTPS se il server lo supporta.", style = MaterialTheme.typography.bodySmall)
+   Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(keep, { keep = it }); Text("Conserva al termine") }
+   Text("Modalità passiva. La cartella remota deve già esistere. L'invio può iniziare durante il download; serve comunque spazio per il file completo.", style = MaterialTheme.typography.bodySmall)
+   error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+  }
+ }, confirmButton = { TextButton(onClick = { onConfirm(draft) }, enabled = error == null) { Text("Salva configurazione") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } })
 }

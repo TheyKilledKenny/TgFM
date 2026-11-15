@@ -3,6 +3,7 @@ package it.tgfm.telegram
 import android.content.Context
 import it.tgfm.core.*
 import it.tgfm.data.Credentials
+import it.tgfm.data.WorkFolder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.drinkless.tdlib.JsonClient
@@ -84,11 +85,14 @@ class TelegramClient(private val context: Context) {
  }
  private suspend fun parameters() {
   val c = requireNotNull(credentials)
+  val folder = WorkFolder(context).apply { requireReady() }
+  send(request("setOption", "name" to "store_all_files_in_files_directory", "value" to request("optionValueBoolean", "value" to true)))
+  send(request("setOption", "name" to "use_storage_optimizer", "value" to request("optionValueBoolean", "value" to false)))
   send(request("setTdlibParameters", "database_directory" to File(context.filesDir, "telegram").absolutePath,
-   "files_directory" to File(context.filesDir, "downloads/tdlib").apply { mkdirs() }.absolutePath,
+   "files_directory" to File(folder.cache, "tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.4.0"))
+   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.0"))
   send(request("setOption", "name" to "ignore_file_names", "value" to request("optionValueBoolean", "value" to false)))
  }
  suspend fun send(json: JSONObject, timeoutMs: Long = 90000): JSONObject {
@@ -105,10 +109,38 @@ class TelegramClient(private val context: Context) {
  private val reader = TelegramReader { send(it) }
  suspend fun channels(progress: (List<Channel>) -> Unit = {}) = reader.channels(progress)
  suspend fun attachments(chatId: Long, window: PostWindow, progress: (List<Attachment>) -> Unit) = reader.attachments(chatId, window, progress)
- suspend fun download(a: Attachment): File {
-  // Revalidate availability because channel messages may have expired since the scan.
+ suspend fun closeForStorageChange() {
+  if (clientId == 0 || auth.value.optString("@type") == "authorizationStateClosed") return
+  send(request("close"))
+  withTimeout(20_000) { auth.first { it.optString("@type") == "authorizationStateClosed" } }
+ }
+ private suspend fun validateAttachment(a: Attachment) {
   val current = send(request("getMessage", "chat_id" to a.chatId, "message_id" to a.messageId))
   check(AttachmentMapper.fromMessage(current).any { it.fileId == a.fileId }) { "L'allegato è cambiato o non è più disponibile. Leggi nuovamente il canale." }
+ }
+ suspend fun startStreaming(a: Attachment) {
+  validateAttachment(a)
+  send(request("deleteFile", "file_id" to a.fileId))
+  send(request("downloadFile", "file_id" to a.fileId, "priority" to 32, "offset" to 0, "limit" to 0, "synchronous" to false))
+ }
+ suspend fun available(a: Attachment, offset: Long): AvailableBytes {
+  val f = send(request("getFile", "file_id" to a.fileId), 15_000)
+  val local = f.getJSONObject("local")
+  val complete = local.optBoolean("is_downloading_completed")
+  val file = local.optString("path").takeIf { it.isNotBlank() }?.let(::File)
+  if (file != null) check(file.canonicalPath.startsWith(File(WorkFolder(context).cache, "tdlib").canonicalPath + File.separator)) { "Percorso TDLib inatteso." }
+  val size = f.optLong("size")
+  val readable = if (complete) (size - offset).coerceAtLeast(0) else
+   send(request("getFileDownloadedPrefixSize", "file_id" to a.fileId, "offset" to offset), 15_000).getLong("size")
+  return AvailableBytes(file, readable, complete, size)
+ }
+ suspend fun stopStreaming(a: Attachment, delete: Boolean) {
+  send(request("cancelDownloadFile", "file_id" to a.fileId, "only_if_pending" to false), 10_000)
+  if (delete) send(request("deleteFile", "file_id" to a.fileId), 10_000)
+ }
+ suspend fun download(a: Attachment): File {
+  // Revalidate availability because channel messages may have expired since the scan.
+  validateAttachment(a)
   send(request("deleteFile", "file_id" to a.fileId))
   try {
    val f = send(request("downloadFile", "file_id" to a.fileId, "priority" to 32, "offset" to 0, "limit" to 0, "synchronous" to true), 30 * 60 * 1000L)
