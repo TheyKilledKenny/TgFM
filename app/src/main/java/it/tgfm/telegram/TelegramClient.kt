@@ -88,7 +88,7 @@ class TelegramClient(private val context: Context) {
    "files_directory" to File(context.filesDir, "downloads/tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.3.0"))
+   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.4.0"))
   send(request("setOption", "name" to "ignore_file_names", "value" to request("optionValueBoolean", "value" to false)))
  }
  suspend fun send(json: JSONObject, timeoutMs: Long = 90000): JSONObject {
@@ -102,37 +102,9 @@ class TelegramClient(private val context: Context) {
    return result
   } finally { pending.remove(id) }
  }
- suspend fun channels(): List<Channel> {
-  val found = linkedMapOf<Long, Channel>()
-  for (list in listOf("chatListMain", "chatListArchive")) {
-   while (true) {
-    currentCoroutineContext().ensureActive()
-    try { send(request("loadChats", "chat_list" to request(list), "limit" to 200)) }
-    catch (e: TelegramException) { if (e.code == 404) break else throw e }
-   }
-   val ids = send(request("getChats", "chat_list" to request(list), "limit" to 100000)).getJSONArray("chat_ids")
-   for (i in 0 until ids.length()) {
-    val chat = send(request("getChat", "chat_id" to ids.getLong(i)))
-    if (chat.getJSONObject("type").optBoolean("is_channel")) found[chat.getLong("id")] = Channel(chat.getLong("id"), chat.getString("title"))
-   }
-  }
-  return found.values.sortedBy { it.title.lowercase() }
- }
- suspend fun attachments(chatId: Long, progress: (Int) -> Unit): List<Attachment> {
-  val result = linkedMapOf<String, Attachment>(); var cursor = 0L
-  send(request("getChat", "chat_id" to chatId))
-  while (true) {
-   currentCoroutineContext().ensureActive()
-   val messages = send(request("getChatHistory", "chat_id" to chatId, "from_message_id" to cursor, "offset" to 0, "limit" to 100, "only_local" to false)).getJSONArray("messages")
-   if (messages.length() == 0) break
-   for (i in 0 until messages.length()) AttachmentMapper.fromMessage(messages.getJSONObject(i)).forEach { result[it.key] = it }
-   progress(result.size)
-   val next = messages.getJSONObject(messages.length() - 1).getLong("id")
-   if (next == cursor) break
-   cursor = next
-  }
-  return result.values.toList()
- }
+ private val reader = TelegramReader { send(it) }
+ suspend fun channels(progress: (List<Channel>) -> Unit = {}) = reader.channels(progress)
+ suspend fun attachments(chatId: Long, window: PostWindow, progress: (List<Attachment>) -> Unit) = reader.attachments(chatId, window, progress)
  suspend fun download(a: Attachment): File {
   // Revalidate availability because channel messages may have expired since the scan.
   val current = send(request("getMessage", "chat_id" to a.chatId, "message_id" to a.messageId))

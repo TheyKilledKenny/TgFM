@@ -26,8 +26,9 @@ L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonom
 
 - Accesso Telegram tramite numero telefonico, codice e verifica in due passaggi, quando richiesta.
 - Conservazione locale della sessione e disconnessione volontaria.
-- Selezione di più canali preferiti, anche privati o archiviati, con ricerca per nome e cambio rapido del canale attivo.
-- Lettura paginata dei metadati degli allegati, senza scaricarne preventivamente i contenuti.
+- Selezione di più canali e gruppi preferiti, anche privati o archiviati, con ricerca per nome e cambio rapido del canale attivo, senza un limite totale di 100 elementi.
+- Lettura paginata dei metadati degli allegati, senza scaricarne preventivamente i contenuti; risultati parziali disponibili anche dopo l'annullamento.
+- Periodo dei post da leggere: **Oggi** (predefinito), **Tutti i file**, **Un giorno preciso** o **Intervallo di date**, applicato durante la lettura.
 - Riconoscimento di documenti, immagini, video, audio, animazioni e sticker scaricabili.
 - Regole persistenti assegnate a un canale preferito, sul nome, sulla data variabile, sulle estensioni, sul MIME e sulla categoria Telegram.
 - Proposte di regole comuni da più esempi desiderati e indesiderati, con anteprima e conferma.
@@ -113,7 +114,9 @@ L'APK viene generato in:
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-La build debug viene firmata automaticamente con la chiave debug locale degli strumenti Android. Il repository non contiene chiavi di firma, credenziali Telegram o APK già generati. Per aggiornare un'app già installata mantenendone i dati, il nuovo APK deve avere lo stesso application ID e lo stesso certificato di firma; una nuova macchina può generare una chiave debug diversa.
+La build debug viene firmata automaticamente con la chiave debug locale degli strumenti Android. I branch sorgente `main` e `develop` non contengono chiavi di firma, credenziali Telegram o APK già generati. I pacchetti per il test sono pubblicati separatamente nel branch [`develop-apk`](https://github.com/TheyKilledKenny/TgFM/tree/develop-apk), con APK e checksum per versione e un collegamento stabile all'ultima build: [scarica TgFM-debug.apk](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk). Se il repository è privato, aprire il collegamento nel browser con un account GitHub autorizzato.
+
+Per aggiornare un'app già installata mantenendone i dati, il nuovo APK deve avere lo stesso application ID e lo stesso certificato di firma; una nuova macchina può generare una chiave debug diversa.
 
 ### Controlli disponibili
 
@@ -138,7 +141,7 @@ zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk
 
 2. Aprire **Configura** e inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
 3. Inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib.
-4. Premere **Aggiorna elenco canali**, cercare i canali per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
+4. Premere **Aggiorna elenco canali e gruppi**, cercare per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
 
 La registrazione di un nuovo account e gli eventuali passaggi di acquisto richiesti da Telegram devono essere completati nell'app ufficiale. La sessione viene riutilizzata agli avvii successivi finché resta valida.
 
@@ -157,12 +160,31 @@ All'avvio, l'app apre Selezione quando sessione e canale preferito sono pronti; 
 
 Flusso abituale:
 
-1. In Selezione, toccare il nome del canale per sceglierne uno fra i preferiti, poi premere **Leggi canale**. La ricerca per nome file si combina con la vista corrente senza perdere le checkbox dei file nascosti.
+1. In Selezione, toccare il nome del canale per sceglierne uno fra i preferiti, scegliere **Post pubblicati** (predefinito **Oggi**), poi premere **Leggi canale**. La ricerca per nome file si combina con la vista corrente senza perdere le checkbox dei file nascosti.
 2. Verificare i risultati, scegliendo **Mostra solo selezionati**, **Mostra selezionati e Affini** oppure **Mostra tutti i file**. I selezionati sono sempre in alto, anche se selezionati manualmente; Affini indica le corrispondenze Possibili. La vista scelta viene conservata.
 3. Modificare le checkbox e premere **Scarica selezionati**.
 4. In Download, attendere il completamento e scegliere i file da condividere o salvare.
 
-## Canali preferiti
+### Periodo di pubblicazione e annullamento della lettura
+
+Il selettore **Post pubblicati** riguarda la data del messaggio Telegram, indipendentemente dalle date presenti nel nome del file:
+
+| Opzione | Post letti |
+|---|---|
+| **Oggi** | Dal primo istante del giorno corrente alla mezzanotte successiva |
+| **Tutti i file** | Intera cronologia accessibile |
+| **Un giorno preciso** | Tutti i post della data scelta nel calendario |
+| **Intervallo di date** | Dalla mezzanotte iniziale alla fine dell'ultimo giorno scelto, inclusi entrambi i giorni |
+
+Si usa il fuso orario del telefono, rispettando anche i cambi di ora legale. Oggi viene ricalcolato quando si preme Leggi canale. Il periodo scelto rimane nella sessione dell'app; una nuova sessione parte da Oggi. Cambiarlo non altera gli allegati già mostrati: per leggere il nuovo periodo premere nuovamente Leggi canale. Il calendario consente date dal 1970 al 2037, compatibili con i timestamp TDLib; l'intervallo invertito disabilita la lettura e mostra un errore.
+
+Per i periodi delimitati TgFM usa `getChatMessageByDate` per raggiungere l'ultimo post entro la data finale, poi legge a ritroso e si ferma al primo post precedente alla data iniziale. Non percorre tutta la cronologia per filtrarla successivamente. La lettura riguarda soltanto i metadati, senza avviare download.
+
+I risultati vengono pubblicati a ogni pagina ricevuta e vengono applicate le regole del canale attivo. **Annulla operazione** interrompe le richieste successive mantenendo i nomi, i riferimenti e le selezioni automatiche già raccolti: la dicitura **Lettura parziale** distingue il risultato da una lettura completata. I risultati restano utilizzabili per selezione e download. Una nuova lettura sostituisce l'elenco; il cambio canale lo azzera. I metadati sono conservati in memoria, senza introdurre un archivio persistente o migrazioni dei dati.
+
+## Canali e gruppi preferiti
+
+L'aggiornamento enumera tutte le pagine TDLib della lista principale e di quella archiviata e include canali, supergruppi e gruppi di base; le chat personali sono escluse. Il valore 100 è la dimensione di una pagina di caricamento, non il numero massimo di preferiti o risultati. L'elenco completo viene ordinato per nome e i duplicati vengono rimossi.
 
 In Configura le checkbox aggiungono o rimuovono i preferiti. Il canale attivo può essere cambiato toccandone il nome in Selezione. Cambiare canale azzera i risultati precedenti, che vanno riletti con Leggi canale; si applicano soltanto i filtri assegnati al canale attivo.
 
@@ -308,7 +330,7 @@ app/src/main/
 └── AndroidManifest.xml
 ```
 
-Il repository contiene i file necessari alla compilazione dell'app e gli avvisi di licenza. APK, cache, log, rapporti, suite e strumenti locali di sviluppo/test sono esclusi.
+I branch sorgente contengono i file necessari alla compilazione dell'app e gli avvisi di licenza. APK, cache, log, rapporti, suite e strumenti locali di sviluppo/test sono esclusi; i pacchetti compilati sono nel solo branch `develop-apk`.
 
 ## Integrazione TDLib
 
@@ -333,11 +355,15 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 
 ## Verifiche e limiti
 
-Durante lo sviluppo della versione 1.3.0 sono passati 129 test locali JUnit/Robolectric/Compose, inclusi preferiti, migrazione, isolamento dei filtri per canale, riconnessione, navigazione, righe compatte, concorrenza, sostituzione dei file, persistenza e condivisione Android. La build debug, la firma, l'allineamento delle librerie e Android Lint sono stati verificati. Le suite e i rapporti di sviluppo non sono inclusi nel repository; il controllo riproducibile disponibile qui è `lintDebug`, oltre alla build dell'APK.
+Durante lo sviluppo della versione 1.4.0 sono passati 145 test locali JUnit/Robolectric/Compose. Coprono anche risultati parziali dopo l'annullamento, salto alla data finale e arresto alla data iniziale, pagine corte, giorni inclusivi e ora legale, calendario e intervalli invalidi, caricamento di 251 canali/gruppi con archiviati e duplicati, oltre alle regressioni su preferiti, filtri, navigazione, download, persistenza e condivisione Android. La build debug, la firma, l'allineamento delle librerie e Android Lint sono stati verificati. Le suite e i rapporti di sviluppo non sono inclusi nel repository; il controllo riproducibile disponibile qui è `lintDebug`, oltre alla build dell'APK.
+
+La versione 1.4.0 non modifica il formato delle preferenze esistenti e non introduce migrazioni o recuperi automatici dei dati.
 
 Rimangono da verificare sul dispositivo fisico e con account reali:
 
 - Login, 2FA, ripristino della sessione e lettura di un canale privato.
+- Su canali con cronologie lunghe: Oggi, giorno preciso, intervallo e Tutti i file; tempi reali della ricerca Telegram, confini dei giorni e annullamento seguito da download dei risultati parziali.
+- Elenco effettivo con oltre 100 canali/gruppi, inclusi quelli archiviati; uso del calendario tramite tocco sul telefono.
 - Download Telegram paralleli, velocità, annullamento e comportamento con rete o spazio insufficienti.
 - Interfaccia e gestione dei trasferimenti in background sul Galaxy S23 Ultra.
 - Condivisione effettiva con WhatsApp e altri destinatari.

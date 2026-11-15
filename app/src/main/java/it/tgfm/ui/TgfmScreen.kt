@@ -26,6 +26,9 @@ import org.json.JSONObject
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun TgfmScreen(vm: AppViewModel, onShare: (Downloaded?) -> Unit, onSave: () -> Unit, onDownload: (Boolean) -> Unit) {
@@ -113,11 +116,11 @@ import java.util.Locale
         item { InfoCard {
          Text("Canale attivo", style = MaterialTheme.typography.labelMedium)
          Text(s.channel?.title ?: "Nessun canale", style = MaterialTheme.typography.titleMedium)
-         Button(onClick = vm::loadChannels, enabled = !s.busy) { Text("Aggiorna elenco canali") }
+         Button(onClick = vm::loadChannels, enabled = !s.busy) { Text("Aggiorna elenco canali e gruppi") }
         } }
         item {
-         SearchField(channelQuery, { channelQuery = it }, "Cerca canale per nome")
-         Text("${s.favorites.size} preferiti · ${visibleChannels.size} canali visibili", style = MaterialTheme.typography.labelMedium)
+         SearchField(channelQuery, { channelQuery = it }, "Cerca canale o gruppo per nome")
+         Text("${s.favorites.size} preferiti · ${visibleChannels.size} canali e gruppi visibili", style = MaterialTheme.typography.labelMedium)
          Text("Spunta i preferiti. Puoi cambiare canale toccandone il nome in Selezione.", style = MaterialTheme.typography.bodySmall)
          if (visibleChannels.isEmpty()) Text("Nessun canale trovato. Modifica o cancella la ricerca.")
         }
@@ -215,7 +218,11 @@ import java.util.Locale
         if (s.connection !in setOf("Connesso", "Aggiornamento")) Text("${s.connection} · puoi consultare gli allegati già letti.", style = MaterialTheme.typography.labelSmall)
        }
        item { SearchField(selectionQuery, { selectionQuery = it }, "Cerca per nome file") }
-       item { Button(onClick = vm::scan, enabled = !s.busy && s.auth == "authorizationStateReady" && s.channel != null) { Text("Leggi canale") } }
+       item { PostPeriodSelector(s.postPeriod, vm::postPeriod, enabled = !s.busy) }
+       item { Button(onClick = vm::scan, enabled = !s.busy && s.auth == "authorizationStateReady" && s.channel != null && s.postPeriod.error() == null) { Text("Leggi canale") } }
+       if (s.scannedPeriod.isNotBlank()) item {
+        Text("${if (s.scanComplete) "Lettura completata" else "Lettura parziale"} · ${s.scannedPeriod}", style = MaterialTheme.typography.labelSmall)
+       }
        item {
         ExposedDropdownMenuBox(expanded = viewMenuExpanded, onExpandedChange = { viewMenuExpanded = it }) {
          OutlinedTextField(value = s.attachmentView.label, onValueChange = {}, readOnly = true,
@@ -373,4 +380,46 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
  OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text(label) }, leadingIcon = { Icon(UiIcons.Search, null) },
   modifier = Modifier.fillMaxWidth(), singleLine = true,
   trailingIcon = { if (value.isNotEmpty()) TextButton(onClick = { onValueChange("") }) { Text("Svuota") } })
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable internal fun PostPeriodSelector(value: PostPeriod, onChange: (PostPeriod) -> Unit, enabled: Boolean) {
+ var expanded by remember { mutableStateOf(false) }
+ var picker by rememberSaveable { mutableStateOf<String?>(null) }
+ Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+  ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (enabled) expanded = it }) {
+   OutlinedTextField(value.mode.label, {}, readOnly = true, enabled = enabled,
+    label = { Text("Post pubblicati") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = enabled).fillMaxWidth().testTag("post-period"))
+   ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+    PostPeriodMode.entries.forEach { mode -> DropdownMenuItem(text = { Text(mode.label) }, onClick = { onChange(value.copy(mode = mode)); expanded = false }) }
+   }
+  }
+  if (value.mode == PostPeriodMode.DAY || value.mode == PostPeriodMode.RANGE) {
+   val format = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+   Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    OutlinedButton(onClick = { picker = "first" }, enabled = enabled, modifier = Modifier.weight(1f).testTag("post-first-date")) {
+     Text("${if (value.mode == PostPeriodMode.DAY) "Giorno" else "Dal"} ${value.first.format(format)}")
+    }
+    if (value.mode == PostPeriodMode.RANGE) OutlinedButton(onClick = { picker = "last" }, enabled = enabled, modifier = Modifier.weight(1f).testTag("post-last-date")) {
+     Text("Al ${value.last.format(format)}")
+    }
+   }
+  }
+  Text("Data del post Telegram, nel fuso orario del telefono. Scegli il periodo prima di Leggi canale.", style = MaterialTheme.typography.labelSmall)
+  value.error()?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+ }
+ picker?.let { target -> key(target) {
+  val day = if (target == "first") value.first else value.last
+  val dateState = rememberDatePickerState(initialSelectedDateMillis = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(), yearRange = 1970..2037)
+  DatePickerDialog(onDismissRequest = { picker = null }, confirmButton = {
+   TextButton(onClick = {
+    dateState.selectedDateMillis?.let { millis ->
+     val selected = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+     onChange(if (target == "first") value.copy(first = selected) else value.copy(last = selected))
+    }
+    picker = null
+   }, enabled = dateState.selectedDateMillis != null) { Text("Conferma data") }
+  }, dismissButton = { TextButton(onClick = { picker = null }) { Text("Annulla") } }) { DatePicker(dateState) }
+ } }
 }
