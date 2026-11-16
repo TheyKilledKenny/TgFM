@@ -6,6 +6,18 @@ TgFM è un'app Android nativa per consultare gli allegati dei propri canali Tele
 
 L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. L'interfaccia è in italiano.
 
+## Stato del progetto
+
+La versione disponibile per il test è **1.5.2** (codice Android **10**), distribuita come APK debug firmato per ARM64. Il completamento del login con un account reale e le altre prove sul telefono elencate in [Verifiche e limiti](#verifiche-e-limiti) restano da confermare; la compilazione riuscita non equivale a una validazione completa sul dispositivo.
+
+- [`develop`](https://github.com/TheyKilledKenny/TgFM/tree/develop): sorgenti della versione descritta in questo README.
+- [`develop-apk`](https://github.com/TheyKilledKenny/TgFM/tree/develop-apk): APK di test e checksum, separati dai sorgenti.
+- [`main`](https://github.com/TheyKilledKenny/TgFM/tree/main): non ancora allineato alla 1.5.2; il passaggio della versione è da approvare.
+
+**[Scarica TgFM 1.5.2](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk)** · [Checksum SHA-256](https://github.com/TheyKilledKenny/TgFM/blob/develop-apk/TgFM-1.5.2-debug.apk.sha256). Per un repository privato serve un browser con accesso GitHub autorizzato. Se l'app di chat tenta un'anteprima non supportata, aprire il collegamento nel browser; dalla pagina GitHub del file è disponibile anche **Download raw file**.
+
+È in valutazione una riprogettazione della sola interfaccia. I mockup sono proposte da approvare: barra delle azioni sempre raggiungibile, nuova disposizione delle impostazioni e nuovi moduli **non sono implementati nell'APK 1.5.2**. Le istruzioni seguenti descrivono l'app attuale.
+
 ## Correzione 1.5.2: avvio e nuovo login Telegram
 
 La regressione introdotta nella 1.5.0 era nell’ordine delle richieste TDLib: l’app attendeva la risposta a `setOption` prima di inviare `setTdlibParameters`. TDLib accoda le opzioni fino all’inizializzazione, quindi l’attesa impediva di inviare proprio i parametri necessari a sbloccarla. Questo blocco riguardava anche una prima installazione, con dati e cache cancellati. La modifica della 1.5.1 alla richiesta dei permessi non risolveva questa causa.
@@ -25,6 +37,7 @@ Versionamento concordato: serie **1.5.x**, senza incrementare il secondo numero 
 - [Compilazione](#compilazione)
 - [Installazione e primo accesso](#installazione-e-primo-accesso)
 - [Utilizzo](#utilizzo)
+- [Canali e gruppi preferiti](#canali-e-gruppi-preferiti)
 - [Configurazione dei filtri](#configurazione-dei-filtri)
 - [Download e gestione dei file](#download-e-gestione-dei-file)
 - [Condivisione e salvataggio](#condivisione-e-salvataggio)
@@ -66,7 +79,7 @@ Versionamento concordato: serie **1.5.x**, senza incrementare il secondo numero 
 
 Il progetto include soltanto la libreria nativa ARM64. Per un emulatore x86/x86_64 o un dispositivo con un'altra ABI occorre compilare e aggiungere la corrispondente libreria TDLib.
 
-### Compilazione
+### Ambiente di compilazione
 
 | Componente | Versione configurata |
 |---|---|
@@ -87,7 +100,7 @@ La libreria TDLib precompilata è inclusa: **per la normale build dell'app non �
 ### 1. Clonare il repository
 
 ```bash
-git clone https://github.com/TheyKilledKenny/TgFM.git
+git clone --branch develop https://github.com/TheyKilledKenny/TgFM.git
 cd TgFM
 ```
 
@@ -154,7 +167,7 @@ zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk
    ```
 
 2. Aprire **Configura**, concedere l’accesso ai file e scegliere la cartella di lavoro (default `Download/TgFM`). Inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
-3. Inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib.
+3. Premere **Configura accesso**, poi inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib. Configura accesso avvia una nuova sessione, eliminando il precedente database Telegram; non è necessario premerlo a ogni avvio dopo un login riuscito.
 4. Premere **Aggiorna elenco canali e gruppi**, cercare per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
 
 La registrazione di un nuovo account e gli eventuali passaggi di acquisto richiesti da Telegram devono essere completati nell'app ufficiale. La sessione viene riutilizzata agli avvii successivi finché resta valida.
@@ -178,6 +191,8 @@ Flusso abituale:
 2. Verificare i risultati, scegliendo **Mostra solo selezionati**, **Mostra selezionati e Affini** oppure **Mostra tutti i file**. I selezionati sono sempre in alto, anche se selezionati manualmente; Affini indica le corrispondenze Possibili. La vista scelta viene conservata.
 3. Modificare le checkbox e premere **Salva**, **Condividi** oppure **Salva su FTP**.
 4. In Download sono disponibili i file completi della cartella di lavoro: condivisione, FTP, apertura ed eliminazione.
+
+**Seleziona tutti** e **Deseleziona tutti** agiscono su tutti gli allegati letti del canale, anche quando ricerca e vista ne nascondono alcuni. In Download agiscono sull'intero elenco locale. I pulsanti Salva, Condividi e Salva su FTP usano l'intera selezione, non soltanto le righe visibili.
 
 ### Periodo di pubblicazione e annullamento della lettura
 
@@ -206,7 +221,7 @@ Ogni regola nuova o modificata deve essere assegnata a un preferito nell'editor.
 
 Rimuovere un preferito cancella anche i filtri associati a quel canale. Se ci sono filtri, compare una sola conferma con il loro numero; annullandola non cambia nulla. Senza filtri associati la rimozione è immediata. I file già scaricati non vengono eliminati. Se si rimuove il canale attivo viene scelto il primo preferito rimasto; senza preferiti si apre Configura.
 
-All'aggiornamento, il vecchio canale selezionato diventa un preferito e riceve le regole precedenti. Eventuali regole senza un vecchio canale vengono conservate come Da assegnare e possono essere associate dall'editor.
+Rimane la compatibilità con le preferenze delle versioni precedenti ai preferiti multipli: il vecchio canale selezionato diventa un preferito e riceve le regole precedenti. Eventuali regole senza un vecchio canale vengono conservate come Da assegnare e possono essere associate dall'editor. Questo comportamento già presente riguarda le preferenze, non il recupero della sessione Telegram.
 
 ## Configurazione dei filtri
 
@@ -281,7 +296,7 @@ La cartella di lavoro è esterna allo spazio privato dell’app. Il percorso pre
 
 I file completi risiedono nella cartella scelta. TDLib scrive in `.tgfm-cache/tdlib` al suo interno; al salvataggio il file completo viene rinominato sullo stesso filesystem, senza una seconda copia completa. Il filesystem deve consentire questa operazione e file della dimensione richiesta: FAT32, ad esempio, non supporta file da 4 GiB o superiori. Nessun fallback allo spazio privato o a una copia integrale aggiuntiva viene eseguito.
 
-La versione 1.5.2 assume la configurazione corrente e non esegue migrazioni, recuperi o pulizie del precedente archivio privato. Un nuovo accesso Telegram si configura dal relativo modulo; filtri e file della cartella esterna sono separati dalla sessione.
+La versione 1.5.2 non esegue recuperi o migrazioni della sessione Telegram né pulizie del precedente archivio privato degli allegati. Un nuovo accesso Telegram si configura dal relativo modulo; filtri e file della cartella esterna sono separati dalla sessione. La compatibilità delle vecchie preferenze è descritta nella sezione sui canali preferiti.
 
 Cambiare cartella chiude e riapre TDLib, senza spostare o eliminare i file della precedente cartella esterna. La cache può essere eliminata esplicitamente con **Svuota cache temporanea**, a trasferimenti fermi; non elimina i file definitivi.
 
@@ -374,7 +389,7 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 
 Per la **1.5.2** sono passati 9 test mirati su inizializzazione, permessi e schermata del nuovo accesso, oltre a una prova con TDLib nativa della stessa revisione inclusa nell’app: il vecchio ordine riproduce il blocco, il client corretto segnala parametri API non validi e, con parametri sintetici, raggiunge `authorizationStateWaitPhoneNumber` su database nuovo. Questa prova gira su Linux con il client Kotlin di produzione e non autentica un account Telegram. Build debug, Lint (0 errori, 20 avvisi), firma e allineamento APK verificati; firma invariata. Le suite precedenti non sono state rieseguite.
 
-La versione 1.5 ha superato 157 test locali JUnit/Robolectric/Compose, la build debug e Android Lint (0 errori, 18 avvisi). Sono state verificate firma e allineamento dell’APK. Le prove FTP usano un server locale reale con download simulato progressivo: invio prima del completamento, integrità SHA-256, rinomina del file nativo, contatori oltre 4 GiB, risposta finale negativa, dimensione remota errata, cancellazione, file vuoti e nomi UTF-8. Sono verificate anche conservazione/eliminazione dopo FTP, protezione della cache nel provider, pulizia legacy limitata, filtri, preferiti e lettura per periodo.
+Come riferimento storico, la **1.5.0** aveva superato 157 test locali JUnit/Robolectric/Compose, la build debug e Android Lint (0 errori, 18 avvisi). Erano state verificate firma e allineamento dell’APK. Le prove FTP usavano un server locale reale con download simulato progressivo: invio prima del completamento, integrità SHA-256, rinomina del file nativo, contatori oltre 4 GiB, risposta finale negativa, dimensione remota errata, cancellazione, file vuoti e nomi UTF-8. Comprendevano conservazione/eliminazione dopo FTP, protezione della cache nel provider, filtri, preferiti, lettura per periodo e la pulizia legacy successivamente rimossa nella 1.5.2. Queste prove non avevano rilevato il blocco di inizializzazione TDLib corretto nella 1.5.2.
 
 Suite, rapporti e strumenti di test sono locali ed esclusi dal repository come richiesto; i controlli riproducibili dalla checkout pubblicata sono build e `lintDebug`. Le prove con file progressivi simulati non sostituiscono la verifica del trasferimento TDLib reale su Android.
 
