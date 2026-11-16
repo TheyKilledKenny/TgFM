@@ -4,18 +4,27 @@ Questo progetto è realizzato da Codex con la supervisione di TheyKilledKenny.
 
 Branch unico per le build debug. I sorgenti sono in `develop`; `main` e `develop` non contengono APK, suite o strumenti locali di sviluppo/test.
 
-**[Scarica TgFM 1.5.1](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.1-debug.apk)** · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
+**[Scarica TgFM 1.5.2](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk)** · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
 
 Il repository è privato: aprire il link in Chrome con un account GitHub autorizzato. In alternativa aprire la pagina del file e premere **Download raw file**. Senza accesso GitHub può rispondere 404.
 
-**Aggiornamento 1.5: al primo avvio vengono eliminati i vecchi allegati nella cartella interna, senza recupero o migrazione, come concordato. Filtri, preferiti e sessione Telegram restano conservati.** Concedere l’accesso ai file in Configura; la cartella di lavoro predefinita è Download/TgFM, modificabile.
+**1.5.2 corregge il blocco del login TDLib presente nella 1.5.0 e nella 1.5.1.** Concedere accesso ai file e usare Configura accesso per un nuovo login: il precedente database Telegram viene eliminato e ricreato, senza recuperi o migrazioni. Filtri e preferiti non vengono cancellati. La cartella predefinita è Download/TgFM.
 
 | Versione | APK | Codice | Sorgenti |
 |---|---|---|---|
+| 1.5.2 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk) · [SHA-256](TgFM-1.5.2-debug.apk.sha256) | 10 | [c7cb2aa](https://github.com/TheyKilledKenny/TgFM/commit/c7cb2aa9ac546dd0133fdc7175696a67b4e8e8c3) |
 | 1.5.1 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.1-debug.apk) · [SHA-256](TgFM-1.5.1-debug.apk.sha256) | 9 | [5c115bd](https://github.com/TheyKilledKenny/TgFM/commit/5c115bdb3daf2c2e8af6f97225ce0fd99c9aff3c) |
 | 1.5.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.0-debug.apk) · [SHA-256](TgFM-1.5.0-debug.apk.sha256) | 8 | [6a29c76](https://github.com/TheyKilledKenny/TgFM/commit/6a29c76b8d08b35bb7bf1f75f33bebe1d8a90bb3) |
 | 1.4.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.4.0-debug.apk) · [SHA-256](TgFM-1.4.0-debug.apk.sha256) | 7 | [bc15657](https://github.com/TheyKilledKenny/TgFM/commit/bc1565730f47c6d89a7ed5fdf1ed2965fb718442) |
 | 1.3.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.3.0-debug.apk) · [SHA-256](TgFM-1.3.0-debug.apk.sha256) | 6 | [d1885a5](https://github.com/TheyKilledKenny/TgFM/commit/d1885a5272cdba2543323fdda17f4b12ca43c6e7) |
+
+## Versione 1.5.2
+
+L’app attendeva la risposta a un’opzione TDLib prima di inviare i parametri necessari a inizializzare TDLib stessa: il login si bloccava anche dopo aver cancellato tutti i dati. Ora accoda le opzioni, invia i parametri e poi attende le risposte. Rimossi Riprova accesso salvato e le protezioni sui dati preesistenti; Configura accesso avvia una sessione nuova. Gli errori restano visibili in Configura.
+
+Verificati 9 test mirati e un test con TDLib nativa della stessa revisione: riprodotto il vecchio blocco; il client corretto arriva alla richiesta del telefono su database nuovo. Build, Lint (0 errori, 20 avvisi), firma e allineamento APK superati. Le suite precedenti non sono state ripetute. Il test nativo gira su Linux con parametri sintetici: telefono, codice, 2FA e account reale restano da provare sul dispositivo.
+
+Stesso certificato debug; APK ARM64, Android 8+. Versione 1.5.2, codice 10. SHA-256: `5e85819d4d5e8a6ebde081e6eba2dcd0e8f764b318014e6b8148506b3f84fbfe`.
 
 ## Versione 1.5.1
 
