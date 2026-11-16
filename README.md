@@ -6,19 +6,17 @@ TgFM è un'app Android nativa per consultare gli allegati dei propri canali Tele
 
 L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. L'interfaccia è in italiano.
 
-## Correzione 1.5.1: accesso Telegram e permesso ai file
+## Correzione 1.5.2: avvio e nuovo login Telegram
 
-La versione 1.5.0 non avviava TDLib senza autorizzazione alla cartella esterna e mostrava i campi API vuoti anche quando le credenziali erano ancora salvate. Questo stato non dimostrava una cancellazione del login. La pulizia dei vecchi allegati interni non include il vault delle credenziali né il database `telegram`.
+La regressione introdotta nella 1.5.0 era nell’ordine delle richieste TDLib: l’app attendeva la risposta a `setOption` prima di inviare `setTdlibParameters`. TDLib accoda le opzioni fino all’inizializzazione, quindi l’attesa impediva di inviare proprio i parametri necessari a sbloccarla. Questo blocco riguardava anche una prima installazione, con dati e cache cancellati. La modifica della 1.5.1 alla richiesta dei permessi non risolveva questa causa.
 
-La 1.5.1 legge lo stato delle credenziali indipendentemente dal permesso ai file e distingue dati disponibili, mancanti e presenti ma non leggibili. Mostra una richiesta guidata di autorizzazione; al ritorno dalle impostazioni ritenta l’avvio con le credenziali e il database esistenti, senza migrazioni o reset. La validità effettiva della sessione viene stabilita da Telegram. Un errore della configurazione FTP non blocca la verifica dell’accesso Telegram. I dati cifrati non leggibili non vengono sostituiti e non viene rigenerata automaticamente la loro chiave.
+La 1.5.2 accoda le opzioni per la cartella esterna, invia subito i parametri e solo dopo attende le risposte. In questo modo le opzioni sono già presenti quando TDLib crea i gestori dei file. Gli errori iniziali rimangono visibili in Configura.
 
-Su Android 11 o successivo, **Accesso a tutti i file** è un accesso speciale, non un normale permesso nella pagina dell’app. Usare **Concedi accesso** in TgFM oppure cercare nelle impostazioni Android **Accesso speciale → Accesso a tutti i file → TgFM** (su Samsung, in genere dal menu delle Applicazioni). Se la pagina specifica non è disponibile, l’app prova ad aprire la lista generale. Su Android 8–10 viene chiesto il permesso di archiviazione ordinario.
+Il login è diretto: **Concedi accesso ai file → API ID e API hash → Configura accesso → telefono → codice → eventuale password 2FA**. I pulsanti Riprova accesso salvato e Riprova lettura credenziali, i blocchi relativi a dati preesistenti e la vecchia pulizia di migrazione sono rimossi. Premere Configura accesso chiude l’eventuale client, elimina il precedente database della sessione Telegram e salva una nuova configurazione, senza dipendere dalla decifratura dei dati precedenti. Il normale riutilizzo della sessione dopo un login riuscito resta automatico agli avvii successivi.
 
-Installare l’aggiornamento sopra l’app esistente: non disinstallare e non cancellare i dati per risolvere questo problema. L’APK mantiene application ID e certificato di firma.
+Su Android 11 o successivo, **Accesso a tutti i file** rimane un accesso speciale, non un permesso ordinario. Usare Concedi accesso oppure **Impostazioni → Applicazioni → Accesso speciale → Accesso a tutti i file → TgFM**. Su Android 8–10 viene richiesto il permesso di archiviazione ordinario.
 
-Versionamento concordato: gli aggiornamenti successivi restano nella serie **1.5.x**; il secondo numero non viene incrementato senza approvazione dell’utente. Questa correzione è **1.5.1**, codice Android 9.
-
-Verificati build debug, Lint (0 errori, 20 avvisi), firma invariata e permessi nel manifest dell’APK. I test della correzione coprono credenziali conservate/non leggibili, richiesta guidata, intent alternativi e tutela del vault/database. Il riutilizzo effettivo della sessione e la schermata degli accessi speciali Samsung restano da verificare sul telefono.
+Versionamento concordato: serie **1.5.x**, senza incrementare il secondo numero senza approvazione. Questa correzione è **1.5.2**, codice Android 10.
 
 ## Indice
 
@@ -283,7 +281,7 @@ La cartella di lavoro è esterna allo spazio privato dell’app. Il percorso pre
 
 I file completi risiedono nella cartella scelta. TDLib scrive in `.tgfm-cache/tdlib` al suo interno; al salvataggio il file completo viene rinominato sullo stesso filesystem, senza una seconda copia completa. Il filesystem deve consentire questa operazione e file della dimensione richiesta: FAT32, ad esempio, non supporta file da 4 GiB o superiori. Nessun fallback allo spazio privato o a una copia integrale aggiuntiva viene eseguito.
 
-**Aggiornamento alla versione 1.5:** i vecchi allegati nella cartella interna dell’app vengono eliminati, come concordato, senza migrazione o recupero. Filtri, preferiti, credenziali e sessione Telegram restano conservati. Il vecchio journal di spostamento viene rimosso senza operare sulle destinazioni esterne che eventualmente indicava.
+La versione 1.5.2 assume la configurazione corrente e non esegue migrazioni, recuperi o pulizie del precedente archivio privato. Un nuovo accesso Telegram si configura dal relativo modulo; filtri e file della cartella esterna sono separati dalla sessione.
 
 Cambiare cartella chiude e riapre TDLib, senza spostare o eliminare i file della precedente cartella esterna. La cache può essere eliminata esplicitamente con **Svuota cache temporanea**, a trasferimenti fermi; non elimina i file definitivi.
 
@@ -373,6 +371,8 @@ SHA-256 del binario TDLib incluso:
 Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzioni Android upstream della revisione utilizzata](https://github.com/tdlib/td/tree/c8828d50f5eac2fc7089ce1089d7ce9095c61b5e/example/android), scegliendo l'interfaccia `JSONJava`. Copiare le librerie risultanti in `app/src/main/jniLibs/<ABI>/` e aggiornare `abiFilters` nella configurazione Gradle. Binding e libreria devono provenire dalla stessa revisione.
 
 ## Verifiche e limiti
+
+Per la **1.5.2** sono passati 9 test mirati su inizializzazione, permessi e schermata del nuovo accesso, oltre a una prova con TDLib nativa della stessa revisione inclusa nell’app: il vecchio ordine riproduce il blocco, il client corretto segnala parametri API non validi e, con parametri sintetici, raggiunge `authorizationStateWaitPhoneNumber` su database nuovo. Questa prova gira su Linux con il client Kotlin di produzione e non autentica un account Telegram. Build debug, Lint (0 errori, 20 avvisi), firma e allineamento APK verificati; firma invariata. Le suite precedenti non sono state rieseguite.
 
 La versione 1.5 ha superato 157 test locali JUnit/Robolectric/Compose, la build debug e Android Lint (0 errori, 18 avvisi). Sono state verificate firma e allineamento dell’APK. Le prove FTP usano un server locale reale con download simulato progressivo: invio prima del completamento, integrità SHA-256, rinomina del file nativo, contatori oltre 4 GiB, risposta finale negativa, dimensione remota errata, cancellazione, file vuoti e nomi UTF-8. Sono verificate anche conservazione/eliminazione dopo FTP, protezione della cache nel provider, pulizia legacy limitata, filtri, preferiti e lettura per periodo.
 

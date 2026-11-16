@@ -52,6 +52,7 @@ class TelegramClient(private val context: Context) {
   }
   System.loadLibrary("tdjsonjava") // fail visibly if ABI/library is missing
   JsonClient.execute(request("setLogVerbosityLevel", "new_verbosity_level" to 0).toString())
+  _auth.value = request("starting")
   clientId = JsonClient.createClientId()
   if (!receiving) {
    receiving = true
@@ -92,15 +93,12 @@ class TelegramClient(private val context: Context) {
   if (configuredClientId == configuringClientId) return@withLock
   val c = requireNotNull(credentials)
   val folder = WorkFolder(context).apply { requireReady() }
-  send(request("setOption", "name" to "store_all_files_in_files_directory", "value" to request("optionValueBoolean", "value" to true)))
-  send(request("setOption", "name" to "use_storage_optimizer", "value" to request("optionValueBoolean", "value" to false)))
-  send(request("setTdlibParameters", "database_directory" to File(context.filesDir, "telegram").absolutePath,
+  TelegramInitialization { send(it, 30_000) }.initialize(request("setTdlibParameters", "database_directory" to File(context.filesDir, "telegram").absolutePath,
    "files_directory" to File(folder.cache, "tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.1"))
+   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.2"))
   configuredClientId = configuringClientId
-  send(request("setOption", "name" to "ignore_file_names", "value" to request("optionValueBoolean", "value" to false)))
   Unit
  }
  suspend fun send(json: JSONObject, timeoutMs: Long = 90000): JSONObject {

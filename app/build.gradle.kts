@@ -9,7 +9,7 @@ android {
  ndkVersion = "27.2.12479018"
  defaultConfig {
   applicationId = "it.tgfm"; minSdk = 26; targetSdk = 35
-  versionCode = 9; versionName = "1.5.1"
+  versionCode = 10; versionName = "1.5.2"
   ndk { abiFilters += "arm64-v8a" }
  }
  buildFeatures { compose = true }

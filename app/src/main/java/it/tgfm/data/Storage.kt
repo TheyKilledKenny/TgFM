@@ -76,13 +76,6 @@ class Storage(private val context: Context) {
   persist(list())
  }
  @Synchronized fun existing(a: Attachment): Downloaded? = list().firstOrNull { it.sourceKey == a.key && (a.size <= 0 || it.size == a.size) }
- /** Deliberate removal approved by the owner; never read/recover legacy external destinations. */
- fun removeLegacyAttachments() {
-  val legacy = File(context.filesDir, "downloads")
-  deleteTree(legacy)
-  AtomicFile(File(context.filesDir, "move-journal.json")).delete()
-  AtomicFile(File(context.filesDir, "download-index.json")).delete()
- }
  fun clearCache() { deleteTree(folder.cache); folder.requireReady() }
  private fun deleteTree(file: File) {
   if (!file.exists()) return
