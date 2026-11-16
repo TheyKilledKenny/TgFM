@@ -2,21 +2,30 @@ Questo progetto è realizzato da Codex con la supervisione di TheyKilledKenny.
 
 # TgFM — APK di develop
 
-Branch unico per le build debug. I sorgenti sono in `develop`; `main` e `develop` non contengono APK, suite o strumenti locali di sviluppo/test.
+Branch unico per le build debug. Le modifiche UI 1.5.3 sono nel workspace e non ancora committate; i sorgenti precedenti sono in `develop`; `main` e `develop` non contengono APK, suite o strumenti locali di sviluppo/test.
 
-**[Scarica TgFM 1.5.2](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk)** · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
+**[Scarica TgFM 1.5.3](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.3-debug.apk)** · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
 
 Il repository è privato: aprire il link in Chrome con un account GitHub autorizzato. In alternativa aprire la pagina del file e premere **Download raw file**. Senza accesso GitHub può rispondere 404.
 
-**1.5.2 corregge il blocco del login TDLib presente nella 1.5.0 e nella 1.5.1.** Concedere accesso ai file e usare Configura accesso per un nuovo login: il precedente database Telegram viene eliminato e ricreato, senza recuperi o migrazioni. Filtri e preferiti non vengono cancellati. La cartella predefinita è Download/TgFM.
+**1.5.3 implementa la UI approvata:** comandi fissi, elenchi compatti, sottosezioni Configura e Conserva per singolo invio FTP. Installare come aggiornamento, senza disinstallare o cancellare dati.
 
 | Versione | APK | Codice | Sorgenti |
 |---|---|---|---|
+| 1.5.3 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.3-debug.apk) · [SHA-256](TgFM-1.5.3-debug.apk.sha256) | 11 | Workspace develop, modifiche UI non ancora committate |
 | 1.5.2 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk) · [SHA-256](TgFM-1.5.2-debug.apk.sha256) | 10 | [c7cb2aa](https://github.com/TheyKilledKenny/TgFM/commit/c7cb2aa9ac546dd0133fdc7175696a67b4e8e8c3) |
 | 1.5.1 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.1-debug.apk) · [SHA-256](TgFM-1.5.1-debug.apk.sha256) | 9 | [5c115bd](https://github.com/TheyKilledKenny/TgFM/commit/5c115bdb3daf2c2e8af6f97225ce0fd99c9aff3c) |
 | 1.5.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.0-debug.apk) · [SHA-256](TgFM-1.5.0-debug.apk.sha256) | 8 | [6a29c76](https://github.com/TheyKilledKenny/TgFM/commit/6a29c76b8d08b35bb7bf1f75f33bebe1d8a90bb3) |
 | 1.4.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.4.0-debug.apk) · [SHA-256](TgFM-1.4.0-debug.apk.sha256) | 7 | [bc15657](https://github.com/TheyKilledKenny/TgFM/commit/bc1565730f47c6d89a7ed5fdf1ed2965fb718442) |
 | 1.3.0 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.3.0-debug.apk) · [SHA-256](TgFM-1.3.0-debug.apk.sha256) | 6 | [d1885a5](https://github.com/TheyKilledKenny/TgFM/commit/d1885a5272cdba2543323fdda17f4b12ca43c6e7) |
+
+## Versione 1.5.3
+
+APK esistente, senza ricompilazione per questa consegna. Verificati in fase di build: compilazione debug, firma invariata, allineamento e TDLib ARM64. Come concordato, nessuna nuova suite automatica o Lint; prove funzionali affidate all’utente.
+
+Sul telefono: nomi lunghi e comandi fissi anche senza file, ricerca e cambio canale, ritorno dalle sottosezioni, filtri da esempi, Salva/Condividi/Apri/Elimina, flag Conserva nella conferma FTP e ritorno dal background. Conserva spento elimina la copia locale dopo invio riuscito; la scelta nella conferma non cambia la preferenza salvata.
+
+Android 8+, ARM64. Codice versione 11. SHA-256: `325648c6ec4ef948622f6db6be287f0610a677dafb5e1751c43fc24ed60cc37e`.
 
 ## Versione 1.5.2
 
