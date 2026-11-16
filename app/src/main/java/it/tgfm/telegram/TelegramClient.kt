@@ -3,8 +3,11 @@ package it.tgfm.telegram
 import android.content.Context
 import it.tgfm.core.*
 import it.tgfm.data.Credentials
+import it.tgfm.data.WorkFolder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.drinkless.tdlib.JsonClient
 import org.json.JSONObject
 import java.io.File
@@ -35,6 +38,8 @@ class TelegramClient(private val context: Context) {
  val files = _files.asSharedFlow()
  private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 8)
  val errors = _errors.asSharedFlow()
+ private val parametersLock = Mutex()
+ private var configuredClientId = 0
  private var credentials: Credentials? = null
  private var receiving = false
  @Synchronized fun start(c: Credentials) {
@@ -47,6 +52,7 @@ class TelegramClient(private val context: Context) {
   }
   System.loadLibrary("tdjsonjava") // fail visibly if ABI/library is missing
   JsonClient.execute(request("setLogVerbosityLevel", "new_verbosity_level" to 0).toString())
+  _auth.value = request("starting")
   clientId = JsonClient.createClientId()
   if (!receiving) {
    receiving = true
@@ -73,14 +79,27 @@ class TelegramClient(private val context: Context) {
   }
   JsonClient.send(clientId, request("getAuthorizationState").toString())
  }
- private suspend fun parameters() {
+ fun onForeground() {
+  if (clientId == 0) return
+  scope.launch {
+   runCatching {
+    _auth.value = send(request("getAuthorizationState"), 10000)
+    if (_auth.value.optString("@type") == "authorizationStateReady") send(request("setOption", "name" to "online", "value" to request("optionValueBoolean", "value" to true)), 10000)
+   }
+  }
+ }
+ private suspend fun parameters() = parametersLock.withLock {
+  val configuringClientId = clientId
+  if (configuredClientId == configuringClientId) return@withLock
   val c = requireNotNull(credentials)
-  send(request("setTdlibParameters", "database_directory" to File(context.filesDir, "telegram").absolutePath,
-   "files_directory" to File(context.filesDir, "downloads/tdlib").apply { mkdirs() }.absolutePath,
+  val folder = WorkFolder(context).apply { requireReady() }
+  TelegramInitialization { send(it, 30_000) }.initialize(request("setTdlibParameters", "database_directory" to File(context.filesDir, "telegram").absolutePath,
+   "files_directory" to File(folder.cache, "tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.2.0"))
-  send(request("setOption", "name" to "ignore_file_names", "value" to request("optionValueBoolean", "value" to false)))
+   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.2"))
+  configuredClientId = configuringClientId
+  Unit
  }
  suspend fun send(json: JSONObject, timeoutMs: Long = 90000): JSONObject {
   check(clientId != 0) { "Configura prima l'accesso Telegram." }
@@ -93,41 +112,41 @@ class TelegramClient(private val context: Context) {
    return result
   } finally { pending.remove(id) }
  }
- suspend fun channels(): List<Channel> {
-  val found = linkedMapOf<Long, Channel>()
-  for (list in listOf("chatListMain", "chatListArchive")) {
-   while (true) {
-    currentCoroutineContext().ensureActive()
-    try { send(request("loadChats", "chat_list" to request(list), "limit" to 200)) }
-    catch (e: TelegramException) { if (e.code == 404) break else throw e }
-   }
-   val ids = send(request("getChats", "chat_list" to request(list), "limit" to 100000)).getJSONArray("chat_ids")
-   for (i in 0 until ids.length()) {
-    val chat = send(request("getChat", "chat_id" to ids.getLong(i)))
-    if (chat.getJSONObject("type").optBoolean("is_channel")) found[chat.getLong("id")] = Channel(chat.getLong("id"), chat.getString("title"))
-   }
-  }
-  return found.values.sortedBy { it.title.lowercase() }
+ private val reader = TelegramReader { send(it) }
+ suspend fun channels(progress: (List<Channel>) -> Unit = {}) = reader.channels(progress)
+ suspend fun attachments(chatId: Long, window: PostWindow, progress: (List<Attachment>) -> Unit) = reader.attachments(chatId, window, progress)
+ suspend fun closeForStorageChange() {
+  if (clientId == 0 || auth.value.optString("@type") == "authorizationStateClosed") return
+  send(request("close"))
+  withTimeout(20_000) { auth.first { it.optString("@type") == "authorizationStateClosed" } }
  }
- suspend fun attachments(chatId: Long, progress: (Int) -> Unit): List<Attachment> {
-  val result = linkedMapOf<String, Attachment>(); var cursor = 0L
-  send(request("getChat", "chat_id" to chatId))
-  while (true) {
-   currentCoroutineContext().ensureActive()
-   val messages = send(request("getChatHistory", "chat_id" to chatId, "from_message_id" to cursor, "offset" to 0, "limit" to 100, "only_local" to false)).getJSONArray("messages")
-   if (messages.length() == 0) break
-   for (i in 0 until messages.length()) AttachmentMapper.fromMessage(messages.getJSONObject(i)).forEach { result[it.key] = it }
-   progress(result.size)
-   val next = messages.getJSONObject(messages.length() - 1).getLong("id")
-   if (next == cursor) break
-   cursor = next
-  }
-  return result.values.toList()
+ private suspend fun validateAttachment(a: Attachment) {
+  val current = send(request("getMessage", "chat_id" to a.chatId, "message_id" to a.messageId))
+  check(AttachmentMapper.fromMessage(current).any { it.fileId == a.fileId }) { "L'allegato è cambiato o non è più disponibile. Leggi nuovamente il canale." }
+ }
+ suspend fun startStreaming(a: Attachment) {
+  validateAttachment(a)
+  send(request("deleteFile", "file_id" to a.fileId))
+  send(request("downloadFile", "file_id" to a.fileId, "priority" to 32, "offset" to 0, "limit" to 0, "synchronous" to false))
+ }
+ suspend fun available(a: Attachment, offset: Long): AvailableBytes {
+  val f = send(request("getFile", "file_id" to a.fileId), 15_000)
+  val local = f.getJSONObject("local")
+  val complete = local.optBoolean("is_downloading_completed")
+  val file = local.optString("path").takeIf { it.isNotBlank() }?.let(::File)
+  if (file != null) check(file.canonicalPath.startsWith(File(WorkFolder(context).cache, "tdlib").canonicalPath + File.separator)) { "Percorso TDLib inatteso." }
+  val size = f.optLong("size")
+  val readable = if (complete) (size - offset).coerceAtLeast(0) else
+   send(request("getFileDownloadedPrefixSize", "file_id" to a.fileId, "offset" to offset), 15_000).getLong("size")
+  return AvailableBytes(file, readable, complete, size)
+ }
+ suspend fun stopStreaming(a: Attachment, delete: Boolean) {
+  send(request("cancelDownloadFile", "file_id" to a.fileId, "only_if_pending" to false), 10_000)
+  if (delete) send(request("deleteFile", "file_id" to a.fileId), 10_000)
  }
  suspend fun download(a: Attachment): File {
   // Revalidate availability because channel messages may have expired since the scan.
-  val current = send(request("getMessage", "chat_id" to a.chatId, "message_id" to a.messageId))
-  check(AttachmentMapper.fromMessage(current).any { it.fileId == a.fileId }) { "L'allegato è cambiato o non è più disponibile. Leggi nuovamente il canale." }
+  validateAttachment(a)
   send(request("deleteFile", "file_id" to a.fileId))
   try {
    val f = send(request("downloadFile", "file_id" to a.fileId, "priority" to 32, "offset" to 0, "limit" to 0, "synchronous" to true), 30 * 60 * 1000L)

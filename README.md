@@ -2,9 +2,33 @@ Questo progetto è realizzato da Codex con la supervisione di TheyKilledKenny.
 
 # TgFM — Telegram File Manager
 
-TgFM è un'app Android nativa per consultare gli allegati dei propri canali Telegram, selezionarli attraverso regole configurabili, scaricarli e poi condividerli o spostarli in una cartella del dispositivo.
+TgFM è un'app Android nativa per consultare gli allegati dei propri canali Telegram, selezionarli attraverso regole configurabili, salvarli nella cartella scelta, condividerli o inviarli a un server FTP/FTPS.
 
 L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. L'interfaccia è in italiano.
+
+## Stato del progetto
+
+La versione disponibile per il test è **1.5.2** (codice Android **10**), distribuita come APK debug firmato per ARM64. Il completamento del login con un account reale e le altre prove sul telefono elencate in [Verifiche e limiti](#verifiche-e-limiti) restano da confermare; la compilazione riuscita non equivale a una validazione completa sul dispositivo.
+
+- [`develop`](https://github.com/TheyKilledKenny/TgFM/tree/develop): sorgenti della versione descritta in questo README.
+- [`develop-apk`](https://github.com/TheyKilledKenny/TgFM/tree/develop-apk): APK di test e checksum, separati dai sorgenti.
+- [`main`](https://github.com/TheyKilledKenny/TgFM/tree/main): ramo destinato alle versioni approvate tramite pull request; i tag identificano le versioni rilasciate.
+
+**[Scarica TgFM 1.5.2](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk)** · [Checksum SHA-256](https://github.com/TheyKilledKenny/TgFM/blob/develop-apk/TgFM-1.5.2-debug.apk.sha256). Per un repository privato serve un browser con accesso GitHub autorizzato. Se l'app di chat tenta un'anteprima non supportata, aprire il collegamento nel browser; dalla pagina GitHub del file è disponibile anche **Download raw file**.
+
+È in valutazione una riprogettazione della sola interfaccia. I mockup sono proposte da approvare: barra delle azioni sempre raggiungibile, nuova disposizione delle impostazioni e nuovi moduli **non sono implementati nell'APK 1.5.2**. Le istruzioni seguenti descrivono l'app attuale.
+
+## Correzione 1.5.2: avvio e nuovo login Telegram
+
+La regressione introdotta nella 1.5.0 era nell’ordine delle richieste TDLib: l’app attendeva la risposta a `setOption` prima di inviare `setTdlibParameters`. TDLib accoda le opzioni fino all’inizializzazione, quindi l’attesa impediva di inviare proprio i parametri necessari a sbloccarla. Questo blocco riguardava anche una prima installazione, con dati e cache cancellati. La modifica della 1.5.1 alla richiesta dei permessi non risolveva questa causa.
+
+La 1.5.2 accoda le opzioni per la cartella esterna, invia subito i parametri e solo dopo attende le risposte. In questo modo le opzioni sono già presenti quando TDLib crea i gestori dei file. Gli errori iniziali rimangono visibili in Configura.
+
+Il login è diretto: **Concedi accesso ai file → API ID e API hash → Configura accesso → telefono → codice → eventuale password 2FA**. I pulsanti Riprova accesso salvato e Riprova lettura credenziali, i blocchi relativi a dati preesistenti e la vecchia pulizia di migrazione sono rimossi. Premere Configura accesso chiude l’eventuale client, elimina il precedente database della sessione Telegram e salva una nuova configurazione, senza dipendere dalla decifratura dei dati precedenti. Il normale riutilizzo della sessione dopo un login riuscito resta automatico agli avvii successivi.
+
+Su Android 11 o successivo, **Accesso a tutti i file** rimane un accesso speciale, non un permesso ordinario. Usare Concedi accesso oppure **Impostazioni → Applicazioni → Accesso speciale → Accesso a tutti i file → TgFM**. Su Android 8–10 viene richiesto il permesso di archiviazione ordinario.
+
+Versionamento concordato: serie **1.5.x**, senza incrementare il secondo numero senza approvazione. Questa correzione è **1.5.2**, codice Android 10.
 
 ## Indice
 
@@ -13,6 +37,7 @@ L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonom
 - [Compilazione](#compilazione)
 - [Installazione e primo accesso](#installazione-e-primo-accesso)
 - [Utilizzo](#utilizzo)
+- [Canali e gruppi preferiti](#canali-e-gruppi-preferiti)
 - [Configurazione dei filtri](#configurazione-dei-filtri)
 - [Download e gestione dei file](#download-e-gestione-dei-file)
 - [Condivisione e salvataggio](#condivisione-e-salvataggio)
@@ -26,16 +51,19 @@ L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonom
 
 - Accesso Telegram tramite numero telefonico, codice e verifica in due passaggi, quando richiesta.
 - Conservazione locale della sessione e disconnessione volontaria.
-- Selezione e ricerca di un canale accessibile all'account, anche privato o archiviato.
-- Lettura paginata dei metadati degli allegati, senza scaricarne preventivamente i contenuti.
+- Selezione di più canali e gruppi preferiti, anche privati o archiviati, con ricerca per nome e cambio rapido del canale attivo, senza un limite totale di 100 elementi.
+- Lettura paginata dei metadati degli allegati, senza scaricarne preventivamente i contenuti; risultati parziali disponibili anche dopo l'annullamento.
+- Periodo dei post da leggere: **Oggi** (predefinito), **Tutti i file**, **Un giorno preciso** o **Intervallo di date**, applicato durante la lettura.
 - Riconoscimento di documenti, immagini, video, audio, animazioni e sticker scaricabili.
-- Regole persistenti sul nome, sulla data variabile, sulle estensioni, sul MIME e sulla categoria Telegram.
+- Regole persistenti assegnate a un canale preferito, sul nome, sulla data variabile, sulle estensioni, sul MIME e sulla categoria Telegram.
 - Proposte di regole comuni da più esempi desiderati e indesiderati, con anteprima e conferma.
 - Selezione manuale degli allegati prima del download.
 - Fino a **quattro download paralleli**, avanzamento individuale, annullamento e ripetizione degli insuccessi.
 - Scelta tra cancellazione e mantenimento dei download precedenti.
 - Condivisione tramite Android Sharesheet, anche verso WhatsApp.
-- Spostamento dei file selezionati tramite Storage Access Framework (SAF).
+- Cartella di lavoro esterna configurabile (default `Download/TgFM`), con cache TDLib separata al suo interno.
+- Invio FTP/FTPS anche mentre Telegram sta ancora scaricando, senza una seconda copia completa.
+- Opzione **Conserva al termine**, eliminazione singola/multipla e pulizia esplicita della cache.
 
 ## Requisiti
 
@@ -51,7 +79,7 @@ L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonom
 
 Il progetto include soltanto la libreria nativa ARM64. Per un emulatore x86/x86_64 o un dispositivo con un'altra ABI occorre compilare e aggiungere la corrispondente libreria TDLib.
 
-### Compilazione
+### Ambiente di compilazione
 
 | Componente | Versione configurata |
 |---|---|
@@ -72,7 +100,7 @@ La libreria TDLib precompilata è inclusa: **per la normale build dell'app non �
 ### 1. Clonare il repository
 
 ```bash
-git clone https://github.com/TheyKilledKenny/TgFM.git
+git clone --branch develop https://github.com/TheyKilledKenny/TgFM.git
 cd TgFM
 ```
 
@@ -113,7 +141,9 @@ L'APK viene generato in:
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-La build debug viene firmata automaticamente con la chiave debug locale degli strumenti Android. Il repository non contiene chiavi di firma, credenziali Telegram o APK già generati. Per aggiornare un'app già installata mantenendone i dati, il nuovo APK deve avere lo stesso application ID e lo stesso certificato di firma; una nuova macchina può generare una chiave debug diversa.
+La build debug viene firmata automaticamente con la chiave debug locale degli strumenti Android. I branch sorgente `main` e `develop` non contengono chiavi di firma, credenziali Telegram o APK già generati. I pacchetti per il test sono pubblicati separatamente nel branch [`develop-apk`](https://github.com/TheyKilledKenny/TgFM/tree/develop-apk), con APK e checksum per versione e un collegamento stabile all'ultima build: [scarica TgFM-debug.apk](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk). Se il repository è privato, aprire il collegamento nel browser con un account GitHub autorizzato.
+
+Per aggiornare un'app già installata mantenendone i dati, il nuovo APK deve avere lo stesso application ID e lo stesso certificato di firma; una nuova macchina può generare una chiave debug diversa.
 
 ### Controlli disponibili
 
@@ -136,9 +166,9 @@ zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk
    adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
 
-2. Aprire **Configura** e inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
-3. Inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib.
-4. Premere **Aggiorna elenco canali**, cercare il canale per nome e selezionarlo. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
+2. Aprire **Configura**, concedere l’accesso ai file e scegliere la cartella di lavoro (default `Download/TgFM`). Inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
+3. Premere **Configura accesso**, poi inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib. Configura accesso avvia una nuova sessione, eliminando il precedente database Telegram; non è necessario premerlo a ogni avvio dopo un login riuscito.
+4. Premere **Aggiorna elenco canali e gruppi**, cercare per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
 
 La registrazione di un nuovo account e gli eventuali passaggi di acquisto richiesti da Telegram devono essere completati nell'app ufficiale. La sessione viene riutilizzata agli avvii successivi finché resta valida.
 
@@ -148,19 +178,50 @@ Il menu segue questo ordine:
 
 | Area | Operazioni principali |
 |---|---|
-| **Selezione** | Leggere il canale, verificare le corrispondenze, scegliere gli allegati e avviare i download |
-| **Download** | Seguire i trasferimenti, aprire i file completati, selezionare, condividere e salvare |
-| **Filtri** | Creare, modificare, attivare o eliminare regole; configurarle da esempi ricercabili |
-| **Configura** | Gestire accesso, canale e politica sui download precedenti |
+| **Selezione** | Cambiare canale fra i preferiti toccandone il nome, leggere gli allegati, cercarli e scegliere Salva, Condividi o Salva su FTP |
+| **Download** | Seguire i trasferimenti, aprire i file completati, selezionare, condividere, inviare a FTP o eliminare |
+| **Filtri** | Assegnare regole ai preferiti, modificarle con azioni a icone e configurarle da esempi ricercabili |
+| **Configura** | Gestire accesso, canali preferiti, cartella di lavoro, cache, FTP e politica sui download |
 
-All'avvio, l'app apre Selezione quando sessione, connessione Telegram e canale sono pronti; altrimenti apre Configura. La perdita dei prerequisiti porta a Configura. Download e Filtri restano accessibili manualmente per le funzioni locali.
+All'avvio, l'app apre Selezione quando sessione e canale preferito sono pronti; altrimenti apre Configura. Una riconnessione temporanea di Telegram, anche dopo il ritorno dal background, non blocca Selezione: è possibile consultare i metadati già letti mentre la connessione viene ripristinata. Sessione non valida o assenza del canale attivo richiedono Configura. Download e Filtri restano accessibili manualmente per le funzioni locali.
 
 Flusso abituale:
 
-1. In Selezione, premere **Leggi canale**.
-2. Verificare i risultati, usando **Mostra tutti gli allegati** per includere anche quelli non corrispondenti.
-3. Modificare le checkbox e premere **Scarica selezionati**.
-4. In Download, attendere il completamento e scegliere i file da condividere o salvare.
+1. In Selezione, toccare il nome del canale per sceglierne uno fra i preferiti, scegliere **Post pubblicati** (predefinito **Oggi**), poi premere **Leggi canale**. La ricerca per nome file si combina con la vista corrente senza perdere le checkbox dei file nascosti.
+2. Verificare i risultati, scegliendo **Mostra solo selezionati**, **Mostra selezionati e Affini** oppure **Mostra tutti i file**. I selezionati sono sempre in alto, anche se selezionati manualmente; Affini indica le corrispondenze Possibili. La vista scelta viene conservata.
+3. Modificare le checkbox e premere **Salva**, **Condividi** oppure **Salva su FTP**.
+4. In Download sono disponibili i file completi della cartella di lavoro: condivisione, FTP, apertura ed eliminazione.
+
+**Seleziona tutti** e **Deseleziona tutti** agiscono su tutti gli allegati letti del canale, anche quando ricerca e vista ne nascondono alcuni. In Download agiscono sull'intero elenco locale. I pulsanti Salva, Condividi e Salva su FTP usano l'intera selezione, non soltanto le righe visibili.
+
+### Periodo di pubblicazione e annullamento della lettura
+
+Il selettore **Post pubblicati** riguarda la data del messaggio Telegram, indipendentemente dalle date presenti nel nome del file:
+
+| Opzione | Post letti |
+|---|---|
+| **Oggi** | Dal primo istante del giorno corrente alla mezzanotte successiva |
+| **Tutti i file** | Intera cronologia accessibile |
+| **Un giorno preciso** | Tutti i post della data scelta nel calendario |
+| **Intervallo di date** | Dalla mezzanotte iniziale alla fine dell'ultimo giorno scelto, inclusi entrambi i giorni |
+
+Si usa il fuso orario del telefono, rispettando anche i cambi di ora legale. Oggi viene ricalcolato quando si preme Leggi canale. Il periodo scelto rimane nella sessione dell'app; una nuova sessione parte da Oggi. Cambiarlo non altera gli allegati già mostrati: per leggere il nuovo periodo premere nuovamente Leggi canale. Il calendario consente date dal 1970 al 2037, compatibili con i timestamp TDLib; l'intervallo invertito disabilita la lettura e mostra un errore.
+
+Per i periodi delimitati TgFM usa `getChatMessageByDate` per raggiungere l'ultimo post entro la data finale, poi legge a ritroso e si ferma al primo post precedente alla data iniziale. Non percorre tutta la cronologia per filtrarla successivamente. La lettura riguarda soltanto i metadati, senza avviare download.
+
+I risultati vengono pubblicati a ogni pagina ricevuta e vengono applicate le regole del canale attivo. **Annulla operazione** interrompe le richieste successive mantenendo i nomi, i riferimenti e le selezioni automatiche già raccolti: la dicitura **Lettura parziale** distingue il risultato da una lettura completata. I risultati restano utilizzabili per selezione e download. Una nuova lettura sostituisce l'elenco; il cambio canale lo azzera. I metadati sono conservati in memoria, senza introdurre un archivio persistente o migrazioni dei dati.
+
+## Canali e gruppi preferiti
+
+L'aggiornamento enumera tutte le pagine TDLib della lista principale e di quella archiviata e include canali, supergruppi e gruppi di base; le chat personali sono escluse. Il valore 100 è la dimensione di una pagina di caricamento, non il numero massimo di preferiti o risultati. L'elenco completo viene ordinato per nome e i duplicati vengono rimossi.
+
+In Configura le checkbox aggiungono o rimuovono i preferiti. Il canale attivo può essere cambiato toccandone il nome in Selezione. Cambiare canale azzera i risultati precedenti, che vanno riletti con Leggi canale; si applicano soltanto i filtri assegnati al canale attivo.
+
+Ogni regola nuova o modificata deve essere assegnata a un preferito nell'editor. Le proposte da esempi sono assegnate al canale dal quale sono stati letti gli allegati. Regole uguali su canali diversi rimangono distinte.
+
+Rimuovere un preferito cancella anche i filtri associati a quel canale. Se ci sono filtri, compare una sola conferma con il loro numero; annullandola non cambia nulla. Senza filtri associati la rimozione è immediata. I file già scaricati non vengono eliminati. Se si rimuove il canale attivo viene scelto il primo preferito rimasto; senza preferiti si apre Configura.
+
+Rimane la compatibilità con le preferenze delle versioni precedenti ai preferiti multipli: il vecchio canale selezionato diventa un preferito e riceve le regole precedenti. Eventuali regole senza un vecchio canale vengono conservate come Da assegnare e possono essere associate dall'editor. Questo comportamento già presente riguarda le preferenze, non il recupero della sessione Telegram.
 
 ## Configurazione dei filtri
 
@@ -218,12 +279,12 @@ Le regole precedenti con un suffisso come `.pdf` nel modello vengono interpretat
 
 Una variante indesiderata può comparire come Possibile senza essere scaricata automaticamente. L'utente può selezionare manualmente anche un escluso: la scelta vale soltanto per l'operazione corrente e non cambia i filtri. La conferma di una modifica alle regole ricalcola le selezioni automatiche.
 
-### Configurazione da più esempi
+### Configura da esempi
 
 1. Dopo aver letto un canale, aprire Filtri e cercare i nomi desiderati.
 2. Contrassegnare più file come **Desiderato** o **Indesiderato**. Le etichette restano assegnate anche quando la ricerca nasconde i file; è disponibile **Solo esempi già contrassegnati**.
 3. Premere **Proponi regole comuni**.
-4. Verificare modelli, conteggi, anteprima e avvisi, quindi confermare.
+4. Verificare modelli, conteggi, anteprima e avvisi, quindi confermare. L’anteprima elenca soltanto i file che verrebbero selezionati automaticamente, senza Possibili, Non corrispondenti o Esclusi.
 
 Le date vengono generalizzate conservando la radice completa. Cinquanta numeri della stessa testata possono produrre un'unica regola, anziché cinquanta nomi esatti. Con esempi positivi, i negativi vincolano le proposte senza generare una blacklist per ogni variante. Proposte ambigue vengono segnalate e omesse. Con soli esempi negativi possono essere proposte esclusioni raggruppate.
 
@@ -231,52 +292,57 @@ L'inferenza è deterministica e non è un classificatore generale: convenzioni s
 
 ## Download e gestione dei file
 
-In Configura, **Cancella i download precedenti** stabilisce il comportamento di una nuova operazione:
+La cartella di lavoro è esterna allo spazio privato dell’app. Il percorso predefinito è `Download/TgFM`; **Configura → Scegli cartella** permette di scegliere un’altra cartella locale, anche su un volume rimovibile accessibile. Non sono supportate cartelle cloud come destinazione diretta di TDLib. Android 11 e successivi richiedono **Accesso a tutti i file**, perché TDLib deve accedere al percorso reale; il solo permesso del selettore documenti non basta. Su Android 8–10 serve il permesso di scrittura nella memoria condivisa.
+
+I file completi risiedono nella cartella scelta. TDLib scrive in `.tgfm-cache/tdlib` al suo interno; al salvataggio il file completo viene rinominato sullo stesso filesystem, senza una seconda copia completa. Il filesystem deve consentire questa operazione e file della dimensione richiesta: FAT32, ad esempio, non supporta file da 4 GiB o superiori. Nessun fallback allo spazio privato o a una copia integrale aggiuntiva viene eseguito.
+
+La versione 1.5.2 non esegue recuperi o migrazioni della sessione Telegram né pulizie del precedente archivio privato degli allegati. Un nuovo accesso Telegram si configura dal relativo modulo; filtri e file della cartella esterna sono separati dalla sessione. La compatibilità delle vecchie preferenze è descritta nella sezione sui canali preferiti.
+
+Cambiare cartella chiude e riapre TDLib, senza spostare o eliminare i file della precedente cartella esterna. La cache può essere eliminata esplicitamente con **Svuota cache temporanea**, a trasferimenti fermi; non elimina i file definitivi.
+
+In Configura, **Cancella i download precedenti** riguarda Salva e Condividi dalla Selezione:
 
 | Impostazione | Comportamento |
 |---|---|
-| Disattivata — valore iniziale | Mantiene gli altri file; elimina l'omonimo precedente quando inizia il relativo download |
-| Attivata | Svuota la cartella privata dei download prima di avviare la nuova operazione |
+| Disattivata — valore iniziale | Riutilizza l’allegato già salvato e riconosciuto; conserva gli altri file e sostituisce gli altri omonimi all’avvio del download |
+| Attivata | Elimina prima i file gestiti da TgFM nella cartella attuale; gli altri file e sottocartelle non vengono svuotati |
 
-**La sovrascrittura è distruttiva:** se il nuovo download fallisce o viene annullato dopo l'eliminazione dell'omonimo, il precedente è perso. Non vengono conservati backup.
-
-L'app richiede fino a quattro trasferimenti contemporanei. Gli allegati con lo stesso file ID Telegram sono coordinati per evitare accessi simultanei al medesimo file nativo. Sono mostrati conteggio, file attivi, avanzamenti ed errori; **Riprova** ritenta gli insuccessi senza ripetere la pulizia generale.
-
-TDLib usa i propri file parziali interni durante il trasferimento. L'app non aggiunge copie temporanee del contenuto: al completamento rinomina il file nello stesso filesystem. I parziali non vengono presentati come pronti per Condividi o Salva. I nomi locali sono sanitizzati; omonimi selezionati nello stesso batch ricevono nomi distinti. Per omonimo si intende lo stesso nome originale completo, estensione compresa.
-
-Dopo il completamento i file sono inizialmente tutti selezionati. Dopo una terminazione forzata dell'app i completati restano disponibili; non è previsto il ripristino automatico del batch interrotto.
+FTP non applica questa pulizia generale. La sovrascrittura degli omonimi è distruttiva: un errore può far perdere il precedente. Non vengono conservati backup. I nomi sono sanitizzati; omonimi dello stesso batch ricevono nomi distinti. Un massimo di quattro download può procedere contemporaneamente, coordinando gli allegati con lo stesso file ID TDLib.
 
 ## Condivisione e salvataggio
 
-### Condividi
+**Salva**, nella pagina Selezione, scarica i file direttamente nella cartella di lavoro. **Condividi** esegue prima lo stesso salvataggio (riutilizzando i file già disponibili), quindi apre la condivisione Android. Se alcuni salvataggi falliscono, la condivisione non parte automaticamente: è possibile riprovare o condividere i completati dalla pagina Download.
 
-Usa Android Sharesheet con `ACTION_SEND` o `ACTION_SEND_MULTIPLE`, URI `content://` del FileProvider e permessi temporanei di sola lettura. Per formati misti viene usato `*/*`.
+La condivisione usa `ACTION_SEND`/`ACTION_SEND_MULTIPLE`, URI `content://` e permessi temporanei di sola lettura. Il provider espone soltanto file completi direttamente nella cartella di lavoro, escludendo cache e dati privati. Non crea una cartella di preparazione né una copia aggiuntiva; l’app destinataria può fare proprie copie e imporre limiti di dimensione, numero e formato. Il ritorno a TgFM non certifica l’invio al destinatario.
 
-L'utente sceglie l'app destinataria, il gruppo o contatto e conferma l'invio. Limiti di numero, formato e dimensione dipendono dalla destinazione. Il ritorno a TgFM non certifica che il destinatario abbia effettivamente ricevuto i file.
+In Download restano **Condividi**, **Salva su FTP**, l’occhio per aprire e i cestini per eliminare un file o la selezione. Non è più presente il precedente Salva/spostamento. Le eliminazioni locali non modificano Telegram o il server FTP.
 
-### Salva
+### Salva su FTP
 
-Apre il selettore cartelle Android e **sposta** soltanto i file selezionati:
+Configurare host, porta, utente, password e cartella remota già esistente. È usata la modalità passiva, con FTP binario oppure **FTPS esplicito (TLS)**. FTPS verifica catena e nome del certificato; non accetta automaticamente certificati non attendibili. FTP semplice non cifra credenziali e contenuto. **Verifica accesso** controlla login e cartella; non crea file remoti per provare la scrittura.
 
-1. Crea un documento nella destinazione, evitando sovrascritture di omonimi.
-2. Trasferisce e verifica dimensione e SHA-256 del contenuto.
-3. Elimina l'originale privato soltanto dopo la verifica riuscita.
-4. Rimuove dall'elenco i file spostati.
+| Conserva al termine | Comportamento |
+|---|---|
+| Spento — predefinito | Un file per volta. Dopo la conferma FTP viene eliminata la copia locale, anche se proveniva da Download |
+| Acceso | Il file rimane nella cartella di lavoro; fino a quattro trasferimenti contemporanei |
 
-Gli originali non trasferiti restano disponibili. La protezione dell'originale nello spostamento SAF è distinta dalla sovrascrittura distruttiva dei download precedenti.
+Da Download si inviano i file esistenti. Da Selezione si riutilizza l’allegato già salvato quando disponibile; altrimenti parte il download TDLib e l’upload può cominciare prima che sia terminato. Un singolo flusso FTP `STOR` legge soltanto i byte contigui confermati da `getFileDownloadedPrefixSize`, aspettando quando non sono ancora disponibili. La dimensione apparente del file parziale non viene usata come indicazione dei byte scaricati. Il buffer di lettura/invio è da 256 KiB; non si caricano interi file in RAM.
 
-Un journal consente di recuperare gli spostamenti interrotti; il comando è disponibile in Configura. Se il provider perde accessibilità o rifiuta di eliminare una copia parziale, l'app segnala il problema e può richiedere di riconcedere la destinazione. Non è possibile ottenere una transazione atomica tra due provider di archiviazione indipendenti.
+Il download resta **integrale sul dispositivo**: l’invio anticipato può sovrapporre ricezione e trasmissione, ma non riduce lo spazio necessario per il file completo. Con Conserva attivo serve spazio per tutti i nuovi file selezionati. Sono controllati lo spazio dichiarato disponibile e un margine di 16 MiB; altri processi possono comunque consumare spazio durante l’operazione.
+
+La copia locale viene eliminata soltanto dopo risposta finale positiva del server e verifica della dimensione, se il server supporta `SIZE`. Non basta aver scritto i byte nel socket. Non è prevista verifica hash remota universale. Un errore o annullamento conserva il file completo o il parziale nella cache; con Conserva disattivato la coda si arresta al primo errore per non accumulare altri file. La cache si elimina manualmente da Configura. Non ci sono riprese, recuperi o migrazioni automatici al riavvio.
+
+I nomi omonimi sul server sono sovrascritti direttamente. Un errore può lasciare un file remoto incompleto e perdere il vecchio omonimo; non vengono introdotti backup o nomi temporanei remoti. La velocità dipende da Telegram, server e rete; l’invio sovrapposto non garantisce un’accelerazione su ogni connessione.
 
 ## Dati locali e sicurezza
 
-- API ID/hash e chiave casuale del database sono cifrati con AES-GCM e una chiave Android Keystore.
-- Il database della sessione TDLib è cifrato; codici di accesso e password non vengono salvati dall'app.
-- Canale, regole e preferenze sono conservati in DataStore.
-- Sessione, contenuti TDLib e download restano nello spazio privato dell'app.
-- Il FileProvider espone esclusivamente la cartella dei file completati.
+- API ID/hash, chiave del database e configurazione FTP sono cifrati con AES-GCM e Android Keystore.
+- Il database della sessione TDLib è cifrato e rimane privato; codici di accesso e password 2FA non vengono salvati dall’app.
+- Canali, regole e preferenze restano nello spazio privato.
+- Allegati salvati e cache TDLib sono nella cartella esterna; sono quindi accessibili anche tramite un gestore file autorizzato.
+- La condivisione concede sola lettura ai file scelti e non espone database o cache.
 - Backup e trasferimento automatico dei dati Android sono disabilitati.
-- L'app non richiede accesso generale alla memoria: Salva usa il permesso concesso dal selettore SAF.
-- Le operazioni sono avviate manualmente; un servizio foreground mantiene attivi i trasferimenti e il ViewModel conserva lo stato nelle normali ricreazioni dell'Activity.
+- Un servizio foreground accompagna i trasferimenti avviati dall’utente. La normale ricreazione dell’Activity mantiene lo stato; una terminazione del processo non riavvia automaticamente le operazioni.
 
 ## Architettura
 
@@ -284,7 +350,7 @@ Un journal consente di recuperare gli spostamenti interrotti; il comando è disp
 app/src/main/
 ├── java/it/tgfm/
 │   ├── core/         Modelli, filtri, nomi, navigazione e parallelismo
-│   ├── data/         DataStore, Keystore, filesystem, SAF e condivisione
+│   ├── data/         DataStore, Keystore, cartella esterna, FTP e condivisione
 │   ├── telegram/     Client TDLib JSON e conversione dei metadati
 │   ├── ui/           Interfaccia Compose e ViewModel
 │   ├── MainActivity.kt
@@ -296,7 +362,7 @@ app/src/main/
 └── AndroidManifest.xml
 ```
 
-Il repository contiene i file necessari alla compilazione dell'app e gli avvisi di licenza. APK, cache, log, rapporti, suite e strumenti locali di sviluppo/test sono esclusi.
+I branch sorgente contengono i file necessari alla compilazione dell'app e gli avvisi di licenza. APK, cache, log, rapporti, suite e strumenti locali di sviluppo/test sono esclusi; i pacchetti compilati sono nel solo branch `develop-apk`.
 
 ## Integrazione TDLib
 
@@ -321,23 +387,32 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 
 ## Verifiche e limiti
 
-Durante lo sviluppo della versione 1.2.0 sono passati 99 test locali JUnit/Robolectric, inclusi filtri, navigazione, concorrenza, sostituzione dei file, persistenza e condivisione Android. La build debug, la firma, l'allineamento delle librerie e Android Lint sono stati verificati. Le suite e i rapporti di sviluppo non sono inclusi nel repository; il controllo riproducibile disponibile qui è `lintDebug`, oltre alla build dell'APK.
+Per la **1.5.2** sono passati 9 test mirati su inizializzazione, permessi e schermata del nuovo accesso, oltre a una prova con TDLib nativa della stessa revisione inclusa nell’app: il vecchio ordine riproduce il blocco, il client corretto segnala parametri API non validi e, con parametri sintetici, raggiunge `authorizationStateWaitPhoneNumber` su database nuovo. Questa prova gira su Linux con il client Kotlin di produzione e non autentica un account Telegram. Build debug, Lint (0 errori, 20 avvisi), firma e allineamento APK verificati; firma invariata. Le suite precedenti non sono state rieseguite.
+
+Come riferimento storico, la **1.5.0** aveva superato 157 test locali JUnit/Robolectric/Compose, la build debug e Android Lint (0 errori, 18 avvisi). Erano state verificate firma e allineamento dell’APK. Le prove FTP usavano un server locale reale con download simulato progressivo: invio prima del completamento, integrità SHA-256, rinomina del file nativo, contatori oltre 4 GiB, risposta finale negativa, dimensione remota errata, cancellazione, file vuoti e nomi UTF-8. Comprendevano conservazione/eliminazione dopo FTP, protezione della cache nel provider, filtri, preferiti, lettura per periodo e la pulizia legacy successivamente rimossa nella 1.5.2. Queste prove non avevano rilevato il blocco di inizializzazione TDLib corretto nella 1.5.2.
+
+Suite, rapporti e strumenti di test sono locali ed esclusi dal repository come richiesto; i controlli riproducibili dalla checkout pubblicata sono build e `lintDebug`. Le prove con file progressivi simulati non sostituiscono la verifica del trasferimento TDLib reale su Android.
 
 Rimangono da verificare sul dispositivo fisico e con account reali:
 
 - Login, 2FA, ripristino della sessione e lettura di un canale privato.
+- Su canali con cronologie lunghe: Oggi, giorno preciso, intervallo e Tutti i file; tempi reali della ricerca Telegram, confini dei giorni e annullamento seguito da download dei risultati parziali.
+- Elenco effettivo con oltre 100 canali/gruppi, inclusi quelli archiviati; uso del calendario tramite tocco sul telefono.
 - Download Telegram paralleli, velocità, annullamento e comportamento con rete o spazio insufficienti.
 - Interfaccia e gestione dei trasferimenti in background sul Galaxy S23 Ultra.
 - Condivisione effettiva con WhatsApp e altri destinatari.
-- Spostamenti, collisioni e recupero degli errori con il provider SAF Samsung.
+- Autorizzazione alla memoria, selettore Samsung, cartella su SD/USB, rinomina e condivisione esterna.
+- Pipeline TDLib reale → FTP/FTPS, file fino a 4 GB, integrità sul server, timeout, interruzioni, spazio e velocità sul telefono.
+- FTPS con certificato valido e comportamento del server FTP personale.
 
-Sono attualmente supportati un account e un canale selezionato. Una cartella predefinita di salvataggio e l'associazione di filtri a più canali sono possibili evoluzioni, non funzionalità disponibili in questa versione.
+Sono supportati un account, più canali preferiti con filtri associati e un canale attivo alla volta. La scansione simultanea di più canali non è presente in questa versione.
 
 ## Licenze di terze parti
 
 - **TDLib:** [Boost Software License 1.0](docs/licenses/TDLib-Boost-1.0.txt).
 - **OpenSSL:** [Apache License 2.0](docs/licenses/OpenSSL-Apache-2.0.txt).
 - **SQLite/SQLCipher incluso in TDLib:** [avviso BSD di ZETETIC LLC](docs/licenses/SQLite.txt).
+- **Apache Commons Net 3.12.0:** [Apache License 2.0 e avviso](docs/licenses/Commons-Net.txt).
 - **AndroidX, Jetpack Compose, Kotlin e coroutines:** rispettive licenze e avvisi upstream; dipendenze dichiarate nella configurazione Gradle.
 
 I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un progetto indipendente.

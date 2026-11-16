@@ -23,6 +23,21 @@ class CredentialVault(context: Context) {
    init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT).setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
   }.generateKey()
  }
+ fun loadFtp(): FtpSettings {
+  val encrypted = prefs.getString("ftp", null) ?: return FtpSettings()
+  val parts = encrypted.split(":")
+  val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+  cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP)))
+  val j = JSONObject(String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), Charsets.UTF_8))
+  return FtpSettings(j.getString("host"), j.getInt("port"), j.getString("user"), j.getString("password"), j.getString("directory"), j.getBoolean("tls"), j.getBoolean("keep"))
+ }
+ fun saveFtp(value: FtpSettings) {
+  value.validate()
+  val json = JSONObject().put("host", value.host).put("port", value.port).put("user", value.user).put("password", value.password).put("directory", value.directory).put("tls", value.tls).put("keep", value.keep).toString()
+  val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
+  val encrypted = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(cipher.doFinal(json.toByteArray()), Base64.NO_WRAP)
+  check(prefs.edit().putString("ftp", encrypted).commit()) { "Impossibile salvare la configurazione FTP." }
+ }
  fun load(): Credentials? {
   val encrypted = prefs.getString("encrypted", null) ?: return null
   val parts = encrypted.split(":")
@@ -31,9 +46,9 @@ class CredentialVault(context: Context) {
   val json = JSONObject(String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), Charsets.UTF_8))
   return Credentials(json.getInt("id"), json.getString("hash"), json.getString("key"))
  }
- fun save(apiId: Int, apiHash: String): Credentials {
+ fun saveNew(apiId: Int, apiHash: String): Credentials {
   require(apiId > 0 && Regex("[a-fA-F0-9]{32}").matches(apiHash)) { "API ID o API hash non validi." }
-  val databaseKey = load()?.databaseKey ?: Base64.encodeToString(ByteArray(32).also { SecureRandom().nextBytes(it) }, Base64.NO_WRAP)
+  val databaseKey = Base64.encodeToString(ByteArray(32).also { SecureRandom().nextBytes(it) }, Base64.NO_WRAP)
   val json = JSONObject().put("id", apiId).put("hash", apiHash).put("key", databaseKey).toString()
   val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
   val encrypted = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(cipher.doFinal(json.toByteArray()), Base64.NO_WRAP)
