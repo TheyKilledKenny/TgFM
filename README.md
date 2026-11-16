@@ -12,7 +12,7 @@ La versione disponibile per il test è **1.5.2** (codice Android **10**), distri
 
 - [`develop`](https://github.com/TheyKilledKenny/TgFM/tree/develop): sorgenti della versione descritta in questo README.
 - [`develop-apk`](https://github.com/TheyKilledKenny/TgFM/tree/develop-apk): APK di test e checksum, separati dai sorgenti.
-- [`main`](https://github.com/TheyKilledKenny/TgFM/tree/main): non ancora allineato alla 1.5.2; il passaggio della versione è da approvare.
+- [`main`](https://github.com/TheyKilledKenny/TgFM/tree/main): ramo destinato alle versioni approvate tramite pull request; i tag identificano le versioni rilasciate.
 
 **[Scarica TgFM 1.5.2](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk)** · [Checksum SHA-256](https://github.com/TheyKilledKenny/TgFM/blob/develop-apk/TgFM-1.5.2-debug.apk.sha256). Per un repository privato serve un browser con accesso GitHub autorizzato. Se l'app di chat tenta un'anteprima non supportata, aprire il collegamento nel browser; dalla pagina GitHub del file è disponibile anche **Download raw file**.
 
