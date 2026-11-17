@@ -1,4 +1,4 @@
-Questo progetto è realizzato da Codex con la supervisione di TheyKilledKenny.
+Questo progetto è mantenuto da TheyKilledKenny. Il codice è stato scritto da una combinazione di intelligenza umana, caffeina e Codex. 😄
 
 # TgFM — Telegram File Manager
 
@@ -10,11 +10,11 @@ TgFM è un'app Android nativa per consultare gli allegati dei propri canali e gr
 
 L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. L'interfaccia è in italiano.
 
-**Release 1.5.3 in preparazione:** la build release ARM64 è compilata e non debuggabile. La firma definitiva e la pubblicazione dell’APK sono in attesa della scelta del certificato; non è ancora disponibile un APK release installabile.
+**[Scarica TgFM 1.5.3 per Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.3/TgFM-1.5.3.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.3/TgFM-1.5.3.apk.sha256) · [Installazione](#installazione-e-primo-accesso)
 
-Android 8.0 o successivo · ARM64 · Distribuzione prevista tramite [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases), senza store.
+Android 8.0 o successivo · ARM64 · Distribuzione tramite [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases), senza store.
 
-La release conterrà `TgFM-1.5.3.apk` e il checksum SHA-256 nella sezione **Assets**. Se GitHub richiede l’accesso, aprire la pagina nel browser con un account autorizzato al repository.
+La [release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) contiene `TgFM-1.5.3.apk` e il checksum SHA-256 nella sezione **Assets**. Se GitHub richiede l’accesso, aprire la pagina nel browser con un account autorizzato al repository.
 
 ## Indice
 
@@ -67,7 +67,7 @@ Il progetto include soltanto la libreria nativa ARM64. Per un emulatore x86/x86_
 
 ## Installazione e primo accesso
 
-1. Quando la release sarà pubblicata, scaricare `TgFM-1.5.3.apk` dagli **Assets** delle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) dal browser del telefono. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
+1. Scaricare `TgFM-1.5.3.apk` dagli **Assets** delle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) dal browser del telefono. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
 2. Aprire **Configura**, concedere l’accesso ai file e scegliere la cartella in **File e cartella** (default `Download/TgFM`). In **Telegram**, inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
 3. Premere **Configura accesso**, poi inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib. Configura accesso avvia una nuova sessione, eliminando il precedente database Telegram; non è necessario premerlo a ogni avvio dopo un login riuscito.
 4. In **Configura → Canali preferiti**, premere **Aggiorna elenco canali e gruppi**, cercare per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
@@ -407,7 +407,7 @@ I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un proge
 
 Resta il limite della generazione da esempi per estensione: utilizzare la regola manuale **Solo PDF**. Il motore dei filtri non è stato modificato in questa versione.
 
-Il pacchetto è **1.5.3**, codice versione **12**, APK release ARM64 con debug disabilitato. Alla pubblicazione, il tag `v1.5.3` identificherà i sorgenti del rilascio; l’APK firmato e il checksum saranno allegati alla GitHub Release. La versione rimane nella serie 1.5.x.
+Il pacchetto è **1.5.3**, codice versione **12**, APK release ARM64 con debug disabilitato. Il tag `v1.5.3` identifica i sorgenti del rilascio; l’APK firmato e il checksum sono allegati alla GitHub Release. La firma è la stessa dei pacchetti precedenti: è possibile aggiornare l’app senza disinstallarla o cancellarne i dati. La versione rimane nella serie 1.5.x.
 
 ### 1.5.2 — Accesso Telegram
 
