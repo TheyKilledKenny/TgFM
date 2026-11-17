@@ -342,11 +342,11 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  }
  fun refreshLocalFiles() = launchOperation("Lettura cartella…") { refreshDownloads() }
  fun selectedDownloads() = _state.value.downloads.filter { it.path in _state.value.downloadedSelection }
- fun uploadFtp(local: Boolean = false) {
+ fun uploadFtp(local: Boolean = false, keep: Boolean = _state.value.ftp.keep) {
   val selected = _state.value.attachments.filter { it.key in _state.value.selected }
   val downloaded = selectedDownloads()
   if (if (local) downloaded.isEmpty() else selected.isEmpty()) { notify("Seleziona almeno un file."); return }
-  val settings = _state.value.ftp
+  val settings = _state.value.ftp.copy(keep = keep)
   launchOperation("Preparazione FTP…", transfer = true) {
    settings.validate()
    _state.update { it.copy(retry = emptyList()) }

@@ -53,7 +53,7 @@ class MainActivity: ComponentActivity() {
      try { folder.launch(null) } catch (e: ActivityNotFoundException) { vm.notify("Selettore cartelle non disponibile.") }
     }, onStorageAccess = ::storageAccess,
     onSelectionShare = { transfer { vm.download(share = true) } },
-    onFtp = { local -> transfer { vm.uploadFtp(local) } },
+    onFtp = { local, keep -> transfer { vm.uploadFtp(local, keep) } },
     onDownload = { retry -> transfer { vm.download(retry) } })
   }
  }

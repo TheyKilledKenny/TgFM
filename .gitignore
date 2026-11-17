@@ -21,3 +21,8 @@ vendor/
 /app/src/androidTest/
 /docs/*
 !/docs/licenses/
+
+# Public README artwork
+!/docs/assets/
+/docs/assets/*
+!/docs/assets/tgfm-cover.svg

@@ -9,8 +9,28 @@ android {
  ndkVersion = "27.2.12479018"
  defaultConfig {
   applicationId = "it.tgfm"; minSdk = 26; targetSdk = 35
-  versionCode = 10; versionName = "1.5.2"
+  versionCode = 12; versionName = "1.5.3"
   ndk { abiFilters += "arm64-v8a" }
+ }
+ val releaseSigning = listOf("TGFM_KEYSTORE", "TGFM_STORE_PASSWORD", "TGFM_KEY_ALIAS", "TGFM_KEY_PASSWORD").associateWith { System.getenv(it) }
+ require(releaseSigning.values.all { it.isNullOrBlank() } || releaseSigning.values.none { it.isNullOrBlank() }) {
+  "Configura tutte le variabili TGFM_KEYSTORE, TGFM_STORE_PASSWORD, TGFM_KEY_ALIAS e TGFM_KEY_PASSWORD, oppure nessuna per produrre un APK release non firmato."
+ }
+ if (releaseSigning.values.none { it.isNullOrBlank() }) {
+  signingConfigs.create("release") {
+   storeFile = file(releaseSigning.getValue("TGFM_KEYSTORE")!!)
+   storePassword = releaseSigning.getValue("TGFM_STORE_PASSWORD")
+   keyAlias = releaseSigning.getValue("TGFM_KEY_ALIAS")
+   keyPassword = releaseSigning.getValue("TGFM_KEY_PASSWORD")
+  }
+ }
+ buildTypes {
+  getByName("release") {
+   isDebuggable = false
+   isJniDebuggable = false
+   isMinifyEnabled = false
+   signingConfig = signingConfigs.findByName("release")
+  }
  }
  buildFeatures { compose = true }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

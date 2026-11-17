@@ -14,6 +14,10 @@ object UiIcons {
  private fun outline(name: String, draw: PathBuilder.() -> Unit) = ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
   path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) { draw() }
  }.build()
+ val Back = outline("Indietro") { moveTo(19f,12f); lineTo(5f,12f); moveTo(11f,6f); lineTo(5f,12f); lineTo(11f,18f) }
+ val Next = outline("Apri sezione") { moveTo(9f,6f); lineTo(15f,12f); lineTo(9f,18f) }
+ val Up = outline("Riduci") { moveTo(6f,15f); lineTo(12f,9f); lineTo(18f,15f) }
+ val Refresh = outline("Aggiorna") { moveTo(20f,7f); curveTo(15f,0f,3f,4f,3f,12f); moveTo(20f,3f); lineTo(20f,8f); lineTo(15f,8f); moveTo(4f,17f); curveTo(9f,24f,21f,20f,21f,12f); moveTo(4f,21f); lineTo(4f,16f); lineTo(9f,16f) }
  val Eye = outline("Apri") {
   moveTo(2f,12f); curveTo(7f,3f,17f,3f,22f,12f); curveTo(17f,21f,7f,21f,2f,12f); close()
   moveTo(15f,12f); arcToRelative(3f,3f,0f,true,true,-6f,0f); arcToRelative(3f,3f,0f,true,true,6f,0f)

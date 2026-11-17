@@ -97,7 +97,7 @@ class TelegramClient(private val context: Context) {
    "files_directory" to File(folder.cache, "tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.2"))
+   "system_language_code" to "it", "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.3"))
   configuredClientId = configuringClientId
   Unit
  }
