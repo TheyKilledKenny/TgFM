@@ -1,0 +1,24 @@
+name: Attach signed release APK
+on:
+  push:
+    branches: [develop-apk]
+    paths: ['releases/v1.5.3/**', '.github/workflows/attach-release-apk.yml']
+permissions:
+  contents: write
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: releases/v1.5.3
+      - name: Check integrity and attach to the existing draft
+        working-directory: releases/v1.5.3
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          sha256sum -c TgFM-1.5.3.apk.sha256
+          test "$(gh release view v1.5.3 --json isDraft --jq .isDraft)" = true
+          gh release upload v1.5.3 TgFM-1.5.3.apk TgFM-1.5.3.apk.sha256 --clobber
