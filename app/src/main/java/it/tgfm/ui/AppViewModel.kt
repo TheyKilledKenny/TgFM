@@ -29,6 +29,8 @@ data class UiState(
  val message: String = "", val failures: List<String> = emptyList(), val retry: List<Attachment> = emptyList(),
  val activeDownloads: Map<Int, DownloadProgress> = emptyMap(),
  val workPath: String = "", val fileAccess: Boolean = false, val ftp: FtpSettings = FtpSettings(),
+ val archiveContents: Boolean = false, val archiveDefault: Boolean = false,
+ val archiveRename: String? = null, val remoteCleanup: List<String> = emptyList(),
  val loginError: String = "",
  val shareFiles: List<Downloaded> = emptyList(), val ready: Boolean = false
 ) {
@@ -53,7 +55,12 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  private val fileLocks = ConcurrentHashMap<Int, Mutex>()
  private var operation: Job? = null
  @Volatile private var foregroundRecheckPending = false
+ private var renameReply: CompletableDeferred<String?>? = null
+ fun answerArchiveName(name: String?) { renameReply?.complete(name) }
+ fun archiveMode(contents: Boolean) { _state.update { it.copy(archiveContents = contents) } }
+ fun archiveDefault(contents: Boolean) { viewModelScope.launch { app.preferences.saveArchiveContents(contents) } }
  init {
+  viewModelScope.launch { app.preferences.archiveContents.collect { value -> _state.update { it.copy(archiveContents = value, archiveDefault = value) } } }
   viewModelScope.launch { app.preferences.configuration.catch { notify("Impossibile leggere canali e filtri: ${it.message}") }.collect { config ->
    applyConfiguration(config)
    routeForConfiguration()
@@ -257,8 +264,8 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   val window = period.window(today)
   _state.update { it.copy(attachments = emptyList(), selected = emptySet(), scannedPeriod = period.description(today), scanComplete = false) }
   val files = tg.attachments(channel.id, window) { files -> _state.update { s -> s.copy(
-   attachments = files,
-   selected = files.filter { FilterEngine.classify(it, s.activeRules) == Match.CERTAIN }.map { it.key }.toSet(),
+   attachments = ArchiveNames.group(files),
+   selected = ArchiveNames.group(files).filter { FilterEngine.classify(it, s.activeRules) == Match.CERTAIN }.map { it.key }.toSet(),
    progress = "${files.size} allegati individuati…") } }
   _state.update { it.copy(scanComplete = true) }
   notify(if (files.isEmpty()) "Nessun allegato disponibile." else "${files.size} allegati letti; ${_state.value.selected.size} corrispondenze certe selezionate.")
@@ -294,6 +301,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  fun download(retryOnly: Boolean = false, share: Boolean = false) {
   val files = if (retryOnly) _state.value.retry else _state.value.attachments.filter { it.key in _state.value.selected }
   if (files.isEmpty()) { notify("Seleziona almeno un allegato."); return }
+  if (files.any { ArchiveNames.isArchive(it.name) }) { archiveTransfer(files, emptyList(), false, share); return }
   launchOperation("Preparazione download…", transfer = true) {
    if (!retryOnly) { app.storage.prepareDownloads(_state.value.clearBeforeDownload); refreshDownloads(true) }
    _state.update { it.copy(tab = AppTab.DOWNLOADS.ordinal, retry = files) }
@@ -342,11 +350,12 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  }
  fun refreshLocalFiles() = launchOperation("Lettura cartella…") { refreshDownloads() }
  fun selectedDownloads() = _state.value.downloads.filter { it.path in _state.value.downloadedSelection }
- fun uploadFtp(local: Boolean = false, keep: Boolean = _state.value.ftp.keep) {
+ fun uploadFtp(local: Boolean = false, keep: Boolean = _state.value.ftp.keep, subdirectory: String = "") {
   val selected = _state.value.attachments.filter { it.key in _state.value.selected }
   val downloaded = selectedDownloads()
   if (if (local) downloaded.isEmpty() else selected.isEmpty()) { notify("Seleziona almeno un file."); return }
   val settings = _state.value.ftp.copy(keep = keep)
+  if (subdirectory.isNotBlank() || (if(local) downloaded.any { ArchiveNames.isArchive(it.originalName) } else selected.any { ArchiveNames.isArchive(it.name) })) { archiveTransfer(selected, downloaded, local, share = false, settings = settings, subdirectory = subdirectory); return }
   launchOperation("Preparazione FTP…", transfer = true) {
    settings.validate()
    _state.update { it.copy(retry = emptyList()) }
@@ -429,6 +438,114 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     else for (a in selected) attachment(a)
    }
    notify("FTP: ${completed.get()}/$total file inviati. " + if (settings.keep) "File locali conservati." else "Copie locali eliminate dopo la conferma FTP.")
+  }
+ }
+ private fun archiveTransfer(selected: List<Attachment>, downloaded: List<Downloaded>, local: Boolean, share: Boolean,
+  settings: FtpSettings? = null, subdirectory: String = "") = launchOperation("Preparazione archivi…", transfer = true) {
+  val contents = _state.value.archiveContents
+  settings?.validate()
+  val subpath = subdirectory.trim().trim('/').let { if(it.isEmpty()) "" else ArchiveNames.safeEntry(it) }
+  app.storage.prepareDownloads(settings == null && !local && _state.value.clearBeforeDownload)
+  val allSaved = mutableListOf<Downloaded>()
+  val remoteTouched = mutableListOf<String>()
+  val uploader = settings?.let { FtpUploader(it, subpath) }
+  suspend fun save(item: Attachment): List<Downloaded> {
+   val family = ArchiveNames.family(ArchiveNames.members(item).first().name)
+   val raw = _state.value.attachments.flatMap(ArchiveNames::members).filter { ArchiveNames.family(it.name) == family }
+   require((item.parts.isEmpty() && ArchiveNames.part(item.name) == null) || raw.map { it.name.lowercase() }.distinct().size == raw.size) { "Più archivi con parti omonime: restringi il periodo prima del download." }
+   var parts = ArchiveNames.members(item)
+   val originals = parts
+   val needsName = ArchiveNames.isArchive(item.name) && parts.any { part ->
+    app.storage.existing(part) == null && File(app.storage.root, part.name).exists()
+   }
+   if (needsName) {
+    val originalStem = item.name.substringBeforeLast('.')
+    val extension = item.name.substringAfterLast('.')
+    fun renamed(name: String) = originals.map { it.copy(name = name.substringBeforeLast('.') + it.name.removePrefix(originalStem)) }
+    var suggestion = FileNames.unique(item.name) { candidate -> renamed(candidate).any { File(app.storage.root, it.name).exists() } }
+    while(true) {
+     val reply = CompletableDeferred<String?>()
+     renameReply = reply
+     _state.update { it.copy(archiveRename = suggestion) }
+     val answer = try { reply.await() ?: throw CancellationException() } finally { renameReply = null; _state.update { it.copy(archiveRename = null) } }
+     if (answer != FileNames.safe(answer) || !answer.endsWith(".$extension", true)) { notify("Mantieni l'estensione .$extension e usa un nome file valido."); continue }
+     parts = renamed(answer)
+     if (parts.any { File(app.storage.root, it.name).exists() }) { suggestion = answer; notify("Nome già presente. Scegli un nome diverso."); continue }
+     break
+    }
+   }
+   requireSpace(parts.filter { needsName || app.storage.existing(it) == null }.sumOf { it.size.coerceAtLeast(0) })
+   val saved = ConcurrentHashMap<String, Downloaded>()
+   ParallelDownloads.run(parts) { part -> fileLocks.getOrPut(part.fileId) { Mutex() }.withLock {
+    val existing = if(needsName) null else app.storage.existing(part)
+    if(existing != null) saved[part.key] = existing else {
+     val target = app.storage.beginDownload(part)
+     _state.update { it.copy(activeDownloads = it.activeDownloads + (part.fileId to DownloadProgress(part.name, size=part.size))) }
+     try { saved[part.key] = app.storage.finishDownload(tg.download(part), target) }
+     finally { _state.update { it.copy(activeDownloads = it.activeDownloads - part.fileId) }; refreshDownloads(true) }
+    }
+   } }
+   return parts.map { saved.getValue(it.key) }
+  }
+  suspend fun send(files: List<Downloaded>) {
+   if(uploader == null) return
+   val source = File(files.first().path)
+   val snapshots = files.map { File(it.path).let { f -> Triple(f, f.length(), f.lastModified()) } }
+   if(contents && ArchiveNames.isArchive(source.name)) {
+    ArchiveReader(files.map { File(it.path) }).use { reader ->
+     var count = 0
+     while(true) {
+      currentCoroutineContext().ensureActive()
+      val entry = reader.next() ?: break
+      remoteTouched += entry.name
+      val sent = uploader.upload(entry.name, { reader.read(it) }) { bytes -> _state.update { it.copy(progress="FTP · ${entry.name}: ${sizeLabel(bytes)}") } }
+      check(entry.size < 0 || sent == entry.size) { "Dimensione estratta non corretta: ${entry.name}" }
+      count++
+     }
+     check(count > 0) { "L'archivio non contiene file da inviare." }
+    }
+   } else for(file in files) {
+    val name = File(file.path).name
+    remoteTouched += name
+    val sent = File(file.path).inputStream().use { input -> uploader.upload(name, { input.read(it) }) { bytes -> _state.update { it.copy(progress="FTP · $name: ${sizeLabel(bytes)}") } } }
+    check(sent == file.size) { "Dimensione FTP non corretta: $name" }
+   }
+   check(snapshots.all { (f,size,time) -> f.isFile && f.length()==size && f.lastModified()==time }) { "Archivio modificato durante l'invio: conservato sul dispositivo." }
+   if(!settings.keep) app.storage.delete(files)
+   remoteTouched.clear()
+  }
+  try {
+   if(local) {
+    val seen = mutableSetOf<String>()
+    for(file in downloaded) {
+     val volumes = if(ArchiveNames.isArchive(file.originalName)) ArchiveReader.volumes(File(file.path)) else listOf(File(file.path))
+     if(!seen.add(volumes.joinToString { it.path })) continue
+     val files = volumes.map { f -> app.storage.list().first { it.path == f.path } }
+     send(files)
+    }
+   } else for(item in selected) {
+    val files = save(item)
+    allSaved += files
+    send(files)
+   }
+   if(share) _state.update { it.copy(shareFiles = allSaved) }
+   _state.update { it.copy(tab = AppTab.DOWNLOADS.ordinal, progress = if(settings != null) "Invio FTP completato" else "Archivi e file salvati") }
+  } catch(e: Exception) {
+   if(settings != null && remoteTouched.isNotEmpty()) {
+    pendingCleanup = Triple(settings, subpath, remoteTouched.distinct())
+    _state.update { it.copy(remoteCleanup = remoteTouched.distinct()) }
+   }
+   throw e
+  } finally { refreshDownloads(true) }
+ }
+ private var pendingCleanup: Triple<FtpSettings, String, List<String>>? = null
+ fun remoteCleanup(confirmed: Boolean) {
+  val pending = pendingCleanup ?: return
+  pendingCleanup = null
+  _state.update { it.copy(remoteCleanup = emptyList()) }
+  if(confirmed) launchOperation("Rimozione file da FTP…", transfer = true) {
+   FtpUploader(pending.first, pending.second).delete(pending.third)
+   notify("File remoti rimossi. Eventuali file sovrascritti non sono recuperabili.")
   }
  }
  private fun requireSpace(size: Long) {

@@ -391,10 +391,20 @@ To rebuild the native component or add other ABIs, follow the [upstream Android 
 - **TDLib:** [Boost Software License 1.0](docs/licenses/TDLib-Boost-1.0.txt).
 - **OpenSSL:** [Apache License 2.0](docs/licenses/OpenSSL-Apache-2.0.txt).
 - **SQLite/SQLCipher included in TDLib:** [ZETETIC LLC BSD notice](docs/licenses/SQLite.txt).
+- **libarchive-android 1.1.6:** [Apache 2.0 wrapper](docs/licenses/libarchive-android-Apache-2.0.txt), [libarchive notices](docs/licenses/libarchive.txt).
+- **Zip4j 2.11.5:** [Apache 2.0](docs/licenses/Zip4j-Apache-2.0.txt).
 - **Apache Commons Net 3.12.0:** [Apache License 2.0 and notice](docs/licenses/Commons-Net.txt).
 - **AndroidX, Jetpack Compose, Kotlin, and coroutines:** respective upstream licenses and notices; dependencies are declared in the Gradle configuration.
 
 The names Telegram and WhatsApp identify third-party services. TgFM is an independent project.
+
+## Archive contents (1.5.4 development version)
+
+Multipart archives appear as one item in Selezione and are grouped before filename filters. **Salva** keeps the original archive and its volumes. **Condividi** and **Salva su FTP** can use either the originals or all files inside, without writing extracted copies to the device. Configura provides the default choice, which can be changed for each operation.
+
+Keep the archive available while receiving apps read shared contents. FTP's **Conserva** keeps the original archive; otherwise the local volumes are deleted only after the entire archive's upload succeeds. The FTP confirmation also accepts a relative destination such as `copies/november`, without changing the saved configuration. Remote cleanup after a failed archive transfer requires confirmation.
+
+Supported naming conventions include `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` and `.zip.NNN`. Encrypted or unsupported archives can still be sent as originals. Actual format support depends on the bundled decoders. This development version has not been published as a release; the stable download above remains 1.5.3.
 
 ## Release notes
 
