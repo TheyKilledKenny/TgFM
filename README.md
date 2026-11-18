@@ -2,9 +2,9 @@
 
 This project is maintained by TheyKilledKenny. The code was written by a combination of human intelligence, caffeine, and Codex. 😄
 
-# TgFM — Telegram File Manager
+# TgFM - Telegram File Manager
 
-![TgFM — Telegram File Manager: select, save, and share your files](docs/assets/tgfm-cover.svg)
+![TgFM - Telegram File Manager: select, save, and share your files](docs/assets/tgfm-cover.svg)
 
 **Your Telegram files, organized your way.**
 
@@ -222,7 +222,7 @@ Under **Configura → File e cartella**, **Cancella i download precedenti** (Del
 
 | Setting | Behavior |
 |---|---|
-| Disabled — default | Reuses an already saved and recognized attachment; keeps other files and replaces other files with the same name when the download starts |
+| Disabled - default | Reuses an already saved and recognized attachment; keeps other files and replaces other files with the same name when the download starts |
 | Enabled | First deletes files managed by TgFM in the current folder; other files and subfolders are not cleared |
 
 FTP does not apply this general cleanup. Overwriting files with the same name is destructive: an error can cause the previous file to be lost. No backups are kept. Names are sanitized; files with the same name in the same batch receive distinct names. A maximum of four downloads can proceed simultaneously, coordinating attachments with the same TDLib file ID.
@@ -243,7 +243,7 @@ The confirmation for each upload lets you change **Conserva sul dispositivo** (K
 
 | Conserva al termine (Keep when finished) | Behavior |
 |---|---|
-| Off — default | One file at a time. After FTP confirmation the local copy is deleted, even if it came from Download |
+| Off - default | One file at a time. After FTP confirmation the local copy is deleted, even if it came from Download |
 | On | The file remains in the working folder; up to four simultaneous transfers |
 
 From Download, existing files are uploaded. From Selezione, an already saved attachment is reused when available; otherwise the TDLib download starts and the upload can begin before it finishes. A single FTP `STOR` stream reads only contiguous bytes confirmed by `getFileDownloadedPrefixSize`, waiting when they are not yet available. The apparent size of the partial file is not used as an indication of downloaded bytes. The read/send buffer is 256 KiB; entire files are not loaded into RAM.
@@ -398,7 +398,7 @@ The names Telegram and WhatsApp identify third-party services. TgFM is an indepe
 
 ## Release notes
 
-### 1.5.3 — First stable release
+### 1.5.3 - First stable release
 
 - Interface reorganized into the four sections Selezione, Download, Filtri, and Configura.
 - Fixed controls above the navigation, compact lists, and full-width filenames in Selezione and Download.
@@ -411,14 +411,14 @@ The limitation of generation from examples by extension remains: use the manual 
 
 The package is **1.5.3**, version code **12**, ARM64 release APK with debugging disabled. The `v1.5.3` tag identifies the release source; the signed APK and checksum are attached to the GitHub Release. The signature is the same as previous packages: the app can be updated without uninstalling it or deleting its data. The version remains in the 1.5.x series.
 
-### 1.5.2 — Telegram access
+### 1.5.2 - Telegram access
 
 Fixed a TDLib initialization deadlock that could also prevent a new login. Removed commands for recovering previous access; Configura accesso starts a new session. Errors remain visible in the Telegram section.
 
-### 1.5.1 — File access
+### 1.5.1 - File access
 
 Fixed the storage access request and handling of the return from Android settings. The Telegram initialization issue was resolved in the following 1.5.2 release.
 
-### 1.5.0 — External folder and FTP
+### 1.5.0 - External folder and FTP
 
 External working folder with TDLib cache inside it, sharing of saved files, FTP/FTPS upload even during download, Keep when finished option, and individual or multiple deletion of local files.
