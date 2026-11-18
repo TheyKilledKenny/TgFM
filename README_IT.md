@@ -356,7 +356,7 @@ Su Windows, da PowerShell:
 
 Con tutte le variabili configurate viene prodotto `app/build/outputs/apk/release/app-release.apk`. Senza variabili viene prodotto `app-release-unsigned.apk`, che richiede firma prima dell’installazione. Una configurazione di firma parziale interrompe la build con un messaggio esplicito; non viene usata automaticamente una chiave debug.
 
-Gli APK ufficiali sono allegati alle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). Il ramo `develop-apk` conserva i precedenti pacchetti di sviluppo. Per aggiornare un'app già installata mantenendone i dati servono lo stesso application ID, una firma compatibile e un codice versione adeguato.
+Gli APK ufficiali sono allegati alle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). Il ramo `develop-apk` contiene gli APK di sviluppo, inclusa la 1.5.4. Per aggiornare un'app già installata mantenendone i dati servono lo stesso application ID, una firma compatibile e un codice versione adeguato.
 
 ## Architettura
 
@@ -376,7 +376,7 @@ app/src/main/
 └── AndroidManifest.xml
 ```
 
-I branch sorgente contengono il progetto Android, il README, la copertina e gli avvisi di licenza. APK, cache e strumenti locali di sviluppo sono separati; gli APK di rilascio sono allegati alle GitHub Releases e le precedenti build di sviluppo sono nel branch `develop-apk`.
+I branch sorgente contengono il progetto Android, il README, la copertina e gli avvisi di licenza. APK, cache e strumenti locali di sviluppo sono separati; gli APK di rilascio sono allegati alle GitHub Releases e le build di sviluppo sono nel branch `develop-apk`.
 
 ## Integrazione TDLib
 
