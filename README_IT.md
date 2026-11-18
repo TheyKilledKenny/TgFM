@@ -18,6 +18,8 @@ Android 8.0 o successivo · ARM64 · Distribuzione tramite [GitHub Releases](htt
 
 La [release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) contiene `TgFM-1.5.3.apk` e il checksum SHA-256 nella sezione **Assets**. Se GitHub richiede l’accesso, aprire la pagina nel browser con un account autorizzato al repository.
 
+**APK di sviluppo:** [TgFM 1.5.4 — contenuto degli archivi](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk) · [SHA-256](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk.sha256). È una build debug per provare la nuova funzionalità, non una nuova release stabile. Si installa aprendo l’APK sul telefono; non serve ADB.
+
 ## Indice
 
 - [Funzionalità](#funzionalità)
@@ -34,6 +36,7 @@ La [release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) 
 - [Architettura](#architettura)
 - [Integrazione TDLib](#integrazione-tdlib)
 - [Licenze di terze parti](#licenze-di-terze-parti)
+- [Contenuto degli archivi (1.5.4)](#contenuto-degli-archivi-sviluppo-154)
 - [Note di rilascio](#note-di-rilascio)
 
 ## Funzionalità
@@ -239,12 +242,14 @@ In Download sono disponibili **Condividi**, **Salva su FTP**, l’occhio per apr
 
 In **Configura → Server FTP**, configurare host, porta, utente, password e cartella remota già esistente. Salvare le modifiche prima di usare Verifica accesso. È usata la modalità passiva, con FTP binario oppure **FTPS esplicito (TLS)**. FTPS verifica catena e nome del certificato; non accetta automaticamente certificati non attendibili. FTP semplice non cifra credenziali e contenuto. **Verifica accesso** controlla login e cartella; non crea file remoti per provare la scrittura.
 
-La conferma di ogni invio consente di cambiare **Conserva sul dispositivo** solo per quell’operazione, partendo dalla preferenza salvata.
+La conferma di ogni invio consente di cambiare **Conserva sul dispositivo** solo per quell’operazione, partendo dalla preferenza salvata. Nella 1.5.4 mostra anche la destinazione e permette una sottocartella relativa, per esempio `copie/novembre`, creata se il server lo consente. La cartella base configurata non cambia.
 
 | Conserva al termine | Comportamento |
 |---|---|
 | Spento — predefinito | Un file per volta. Dopo la conferma FTP viene eliminata la copia locale, anche se proveniva da Download |
 | Acceso | Il file rimane nella cartella di lavoro; fino a quattro trasferimenti contemporanei |
+
+Il comportamento di invio anticipato descritto sotto riguarda i file ordinari senza sottocartella specifica per l’invio. Gli archivi vengono scaricati completamente prima della lettura del contenuto; i gruppi sono elaborati uno alla volta, con download parallelo dei volumi. Non vengono create copie estratte su disco.
 
 Da Download si inviano i file esistenti. Da Selezione si riutilizza l’allegato già salvato quando disponibile; altrimenti parte il download TDLib e l’upload può cominciare prima che sia terminato. Un singolo flusso FTP `STOR` legge soltanto i byte contigui confermati da `getFileDownloadedPrefixSize`, aspettando quando non sono ancora disponibili. La dimensione apparente del file parziale non viene usata come indicazione dei byte scaricati. Il buffer di lettura/invio è da 256 KiB; non si caricano interi file in RAM.
 
@@ -253,6 +258,14 @@ Il download resta **integrale sul dispositivo**: l’invio anticipato può sovra
 La copia locale viene eliminata soltanto dopo risposta finale positiva del server e verifica della dimensione, se il server supporta `SIZE`. Non basta aver scritto i byte nel socket. Non è prevista verifica hash remota universale. Un errore o annullamento conserva il file completo o il parziale nella cache; con Conserva disattivato la coda si arresta al primo errore per non accumulare altri file. La cache si elimina manualmente da Configura. Non ci sono riprese, recuperi o migrazioni automatici al riavvio.
 
 I nomi omonimi sul server sono sovrascritti direttamente. Un errore può lasciare un file remoto incompleto e perdere il vecchio omonimo; non vengono introdotti backup o nomi temporanei remoti. La velocità dipende da Telegram, server e rete; l’invio sovrapposto non garantisce un’accelerazione su ogni connessione.
+
+## Contenuto degli archivi (sviluppo 1.5.4)
+
+Gli archivi multipart compaiono come una sola voce in Selezione e vengono raggruppati prima dei filtri sul nome. **Salva** conserva l’archivio originale e i suoi volumi. **Condividi** e **Salva su FTP** permettono di usare gli originali oppure tutti i file contenuti, senza creare copie estratte sul dispositivo. Configura offre la scelta iniziale, modificabile nella conferma di ogni operazione.
+
+L’archivio deve rimanere disponibile mentre le app destinatarie ne leggono i contenuti. **Conserva** su FTP mantiene l’archivio originale; se disattivato, i volumi locali vengono eliminati soltanto dopo il successo dell’invio di tutto il contenuto. La conferma FTP consente una destinazione relativa come `copie/novembre`, senza cambiare la configurazione salvata. Dopo un errore nell’invio di un archivio, l’eventuale pulizia remota richiede conferma.
+
+Sono riconosciuti i nomi `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` e `.zip.NNN`. Gli archivi cifrati o non supportati possono essere inviati come originali. Il supporto effettivo dei formati dipende dai decoder inclusi. Questa versione di sviluppo non è una release stabile: il download stabile resta 1.5.3.
 
 ## Limiti attuali
 
@@ -391,12 +404,18 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 - **TDLib:** [Boost Software License 1.0](docs/licenses/TDLib-Boost-1.0.txt).
 - **OpenSSL:** [Apache License 2.0](docs/licenses/OpenSSL-Apache-2.0.txt).
 - **SQLite/SQLCipher incluso in TDLib:** [avviso BSD di ZETETIC LLC](docs/licenses/SQLite.txt).
+- **libarchive-android 1.1.6:** [wrapper Apache 2.0](docs/licenses/libarchive-android-Apache-2.0.txt), [avvisi libarchive](docs/licenses/libarchive.txt).
+- **Zip4j 2.11.5:** [Apache 2.0](docs/licenses/Zip4j-Apache-2.0.txt).
 - **Apache Commons Net 3.12.0:** [Apache License 2.0 e avviso](docs/licenses/Commons-Net.txt).
 - **AndroidX, Jetpack Compose, Kotlin e coroutines:** rispettive licenze e avvisi upstream; dipendenze dichiarate nella configurazione Gradle.
 
 I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un progetto indipendente.
 
 ## Note di rilascio
+
+### 1.5.4 — Build di sviluppo
+
+Raggruppamento multipart prima dei filtri, condivisione virtuale del contenuto, decompressione progressiva verso FTP, sottocartella FTP per invio e conferma della pulizia remota. Codice versione 13, APK debug ARM64 nel branch `develop-apk`. La release stabile resta 1.5.3.
 
 ### 1.5.3 — Prima release stabile
 

@@ -18,6 +18,8 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 
 [Release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) contains `TgFM-1.5.3.apk` and its SHA-256 checksum in the **Assets** section. If GitHub requires you to sign in, open the page in a browser with an account authorized to access the repository.
 
+**Development APK:** [TgFM 1.5.4 — archive contents](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk) · [SHA-256](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk.sha256). This is a debug build for trying the new feature, not a new stable release. Install the APK directly on the phone; no ADB is required.
+
 ## Contents
 
 - [Features](#features)
@@ -34,6 +36,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 - [Architecture](#architecture)
 - [TDLib integration](#tdlib-integration)
 - [Third-party licenses](#third-party-licenses)
+- [Archive contents (1.5.4)](#archive-contents-154-development-version)
 - [Release notes](#release-notes)
 
 ## Features
@@ -239,12 +242,14 @@ In Download, **Condividi** (Share), **Salva su FTP** (Save to FTP), the eye icon
 
 Under **Configura → Server FTP**, configure the host, port, user, password, and an existing remote folder. Save changes before using **Verifica accesso** (Verify access). Passive mode is used, with binary FTP or **FTPS esplicito (TLS)** (Explicit FTPS). FTPS verifies the certificate chain and name; it does not automatically accept untrusted certificates. Plain FTP does not encrypt credentials or content. Verifica accesso checks login and the folder; it does not create remote files to test write access.
 
-The confirmation for each upload lets you change **Conserva sul dispositivo** (Keep on device) for that operation only, starting from the saved preference.
+The confirmation for each upload lets you change **Conserva sul dispositivo** (Keep on device) for that operation only, starting from the saved preference. In 1.5.4 it also shows the destination and accepts a relative subfolder, such as `copies/november`, created if permitted by the server. The configured base folder remains unchanged.
 
 | Conserva al termine (Keep when finished) | Behavior |
 |---|---|
 | Off — default | One file at a time. After FTP confirmation the local copy is deleted, even if it came from Download |
 | On | The file remains in the working folder; up to four simultaneous transfers |
+
+The early-upload behavior below applies to ordinary files without a per-upload subfolder. Archives are downloaded completely before their contents are read; archive groups are processed one at a time, with parallel downloads of their volumes. No extracted disk copy is created.
 
 From Download, existing files are uploaded. From Selezione, an already saved attachment is reused when available; otherwise the TDLib download starts and the upload can begin before it finishes. A single FTP `STOR` stream reads only contiguous bytes confirmed by `getFileDownloadedPrefixSize`, waiting when they are not yet available. The apparent size of the partial file is not used as an indication of downloaded bytes. The read/send buffer is 256 KiB; entire files are not loaded into RAM.
 
@@ -253,6 +258,14 @@ The download remains **complete on the device**: early upload can overlap receiv
 The local copy is deleted only after a positive final response from the server and a size check, if the server supports `SIZE`. Writing the bytes to the socket is not enough. There is no universal remote hash verification. An error or cancellation keeps the complete file or the partial file in the cache; with Keep disabled, the queue stops at the first error to avoid accumulating more files. The cache is cleared manually from Configura. There are no automatic resumes, recoveries, or migrations on restart.
 
 Files with the same name on the server are overwritten directly. An error may leave an incomplete remote file and lose the previous file with the same name; no backups or temporary remote names are introduced. Speed depends on Telegram, the server, and the network; overlapping upload does not guarantee a speedup on every connection.
+
+## Archive contents (1.5.4 development version)
+
+Multipart archives appear as one item in Selezione and are grouped before filename filters. **Salva** keeps the original archive and its volumes. **Condividi** and **Salva su FTP** can use either the originals or all files inside, without writing extracted copies to the device. Configura provides the default choice, which can be changed for each operation.
+
+Keep the archive available while receiving apps read shared contents. FTP's **Conserva** keeps the original archive; otherwise the local volumes are deleted only after the entire archive's upload succeeds. The FTP confirmation also accepts a relative destination such as `copies/november`, without changing the saved configuration. Remote cleanup after a failed archive transfer requires confirmation.
+
+Supported naming conventions include `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` and `.zip.NNN`. Encrypted or unsupported archives can still be sent as originals. Actual format support depends on the bundled decoders. This development version has not been published as a release; the stable download above remains 1.5.3.
 
 ## Current limitations
 
@@ -343,7 +356,7 @@ On Windows, from PowerShell:
 
 With all variables configured, `app/build/outputs/apk/release/app-release.apk` is produced. Without the variables, `app-release-unsigned.apk` is produced and requires signing before installation. A partial signing configuration stops the build with an explicit message; a debug key is not used automatically.
 
-Official APKs are attached to [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). The `develop-apk` branch retains earlier development packages. To update an already installed app while keeping its data, the same application ID, a compatible signature, and an appropriate version code are required.
+Official APKs are attached to [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). The `develop-apk` branch contains development APKs, including 1.5.4. To update an already installed app while keeping its data, the same application ID, a compatible signature, and an appropriate version code are required.
 
 ## Architecture
 
@@ -363,7 +376,7 @@ app/src/main/
 └── AndroidManifest.xml
 ```
 
-The source branches contain the Android project, README, cover, and license notices. APKs, caches, and local development tools are separate; release APKs are attached to GitHub Releases and earlier development builds are in the `develop-apk` branch.
+The source branches contain the Android project, README, cover, and license notices. APKs, caches, and local development tools are separate; release APKs are attached to GitHub Releases and development builds are in the `develop-apk` branch.
 
 ## TDLib integration
 
@@ -398,15 +411,11 @@ To rebuild the native component or add other ABIs, follow the [upstream Android 
 
 The names Telegram and WhatsApp identify third-party services. TgFM is an independent project.
 
-## Archive contents (1.5.4 development version)
-
-Multipart archives appear as one item in Selezione and are grouped before filename filters. **Salva** keeps the original archive and its volumes. **Condividi** and **Salva su FTP** can use either the originals or all files inside, without writing extracted copies to the device. Configura provides the default choice, which can be changed for each operation.
-
-Keep the archive available while receiving apps read shared contents. FTP's **Conserva** keeps the original archive; otherwise the local volumes are deleted only after the entire archive's upload succeeds. The FTP confirmation also accepts a relative destination such as `copies/november`, without changing the saved configuration. Remote cleanup after a failed archive transfer requires confirmation.
-
-Supported naming conventions include `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` and `.zip.NNN`. Encrypted or unsupported archives can still be sent as originals. Actual format support depends on the bundled decoders. This development version has not been published as a release; the stable download above remains 1.5.3.
-
 ## Release notes
+
+### 1.5.4 — Development build
+
+Multipart grouping before filters; virtual sharing of archive contents; streaming decompression to FTP; per-upload FTP subfolders; confirmation before remote cleanup. Version code 13, ARM64 debug APK on `develop-apk`. The stable release remains 1.5.3.
 
 ### 1.5.3 — First stable release
 
