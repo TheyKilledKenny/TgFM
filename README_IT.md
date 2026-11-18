@@ -2,9 +2,9 @@
 
 Questo progetto è mantenuto da TheyKilledKenny. Il codice è stato scritto da una combinazione di intelligenza umana, caffeina e Codex. 😄
 
-# TgFM — Telegram File Manager
+# TgFM - Telegram File Manager
 
-![TgFM — Telegram File Manager: seleziona, salva e condividi i tuoi file](docs/assets/tgfm-cover.svg)
+![TgFM - Telegram File Manager: seleziona, salva e condividi i tuoi file](docs/assets/tgfm-cover.svg)
 
 **I tuoi file Telegram, organizzati a modo tuo.**
 
@@ -222,7 +222,7 @@ In **Configura → File e cartella**, **Cancella i download precedenti** riguard
 
 | Impostazione | Comportamento |
 |---|---|
-| Disattivata — valore iniziale | Riutilizza l’allegato già salvato e riconosciuto; conserva gli altri file e sostituisce gli altri omonimi all’avvio del download |
+| Disattivata - valore iniziale | Riutilizza l’allegato già salvato e riconosciuto; conserva gli altri file e sostituisce gli altri omonimi all’avvio del download |
 | Attivata | Elimina prima i file gestiti da TgFM nella cartella attuale; gli altri file e sottocartelle non vengono svuotati |
 
 FTP non applica questa pulizia generale. La sovrascrittura degli omonimi è distruttiva: un errore può far perdere il precedente. Non vengono conservati backup. I nomi sono sanitizzati; omonimi dello stesso batch ricevono nomi distinti. Un massimo di quattro download può procedere contemporaneamente, coordinando gli allegati con lo stesso file ID TDLib.
@@ -243,7 +243,7 @@ La conferma di ogni invio consente di cambiare **Conserva sul dispositivo** solo
 
 | Conserva al termine | Comportamento |
 |---|---|
-| Spento — predefinito | Un file per volta. Dopo la conferma FTP viene eliminata la copia locale, anche se proveniva da Download |
+| Spento - predefinito | Un file per volta. Dopo la conferma FTP viene eliminata la copia locale, anche se proveniva da Download |
 | Acceso | Il file rimane nella cartella di lavoro; fino a quattro trasferimenti contemporanei |
 
 Da Download si inviano i file esistenti. Da Selezione si riutilizza l’allegato già salvato quando disponibile; altrimenti parte il download TDLib e l’upload può cominciare prima che sia terminato. Un singolo flusso FTP `STOR` legge soltanto i byte contigui confermati da `getFileDownloadedPrefixSize`, aspettando quando non sono ancora disponibili. La dimensione apparente del file parziale non viene usata come indicazione dei byte scaricati. Il buffer di lettura/invio è da 256 KiB; non si caricano interi file in RAM.
@@ -398,7 +398,7 @@ I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un proge
 
 ## Note di rilascio
 
-### 1.5.3 — Prima release stabile
+### 1.5.3 - Prima release stabile
 
 - Interfaccia riorganizzata nelle quattro sezioni Selezione, Download, Filtri e Configura.
 - Comandi fissi sopra la navigazione, elenchi compatti e nomi dei file a tutta larghezza in Selezione e Download.
@@ -411,14 +411,14 @@ Resta il limite della generazione da esempi per estensione: utilizzare la regola
 
 Il pacchetto è **1.5.3**, codice versione **12**, APK release ARM64 con debug disabilitato. Il tag `v1.5.3` identifica i sorgenti del rilascio; l’APK firmato e il checksum sono allegati alla GitHub Release. La firma è la stessa dei pacchetti precedenti: è possibile aggiornare l’app senza disinstallarla o cancellarne i dati. La versione rimane nella serie 1.5.x.
 
-### 1.5.2 — Accesso Telegram
+### 1.5.2 - Accesso Telegram
 
 Corretto il blocco dell’inizializzazione TDLib, che poteva impedire anche un nuovo login. Rimossi i comandi di recupero dell’accesso precedente; Configura accesso avvia una nuova sessione. Gli errori restano visibili nella sezione Telegram.
 
-### 1.5.1 — Accesso ai file
+### 1.5.1 - Accesso ai file
 
 Corretta la richiesta dell’accesso alla memoria e la gestione del ritorno dalle impostazioni Android. Il problema di inizializzazione Telegram è stato risolto nella successiva 1.5.2.
 
-### 1.5.0 — Cartella esterna e FTP
+### 1.5.0 - Cartella esterna e FTP
 
 Cartella di lavoro esterna con cache TDLib al suo interno, condivisione dei file salvati, invio FTP/FTPS anche durante il download, opzione Conserva al termine ed eliminazione singola o multipla dei file locali.
