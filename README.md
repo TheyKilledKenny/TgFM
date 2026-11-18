@@ -18,7 +18,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 
 [Release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) contains `TgFM-1.5.3.apk` and its SHA-256 checksum in the **Assets** section. If GitHub requires you to sign in, open the page in a browser with an account authorized to access the repository.
 
-**Development APK:** [TgFM 1.5.4 — archive contents](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk) · [SHA-256](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk.sha256). This is a debug build for trying the new feature, not a new stable release. Install the APK directly on the phone; no ADB is required.
+**Development APK:** [TgFM 1.5.4 — archive contents](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk.sha256). This is a debug build for trying the new feature, not a new stable release. Install the APK directly on the phone; no ADB is required.
 
 ## Contents
 
