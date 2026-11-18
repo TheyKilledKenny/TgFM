@@ -4,7 +4,7 @@ Questo progetto è mantenuto da TheyKilledKenny. Il codice è stato scritto da u
 
 Branch unico per gli APK di sviluppo. La build corrente è **1.5.4**, codice versione **13**, ARM64, firmata con lo stesso certificato delle build precedenti. I sorgenti e i README aggiornati sono nel branch [feature/archive-content](https://github.com/TheyKilledKenny/TgFM/tree/feature/archive-content). La release stabile resta 1.5.3.
 
-**[Scarica TgFM 1.5.4](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk)** · [SHA-256](TgFM-1.5.4-debug.apk.sha256) · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
+**[Scarica TgFM 1.5.4](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk)** · [SHA-256](TgFM-1.5.4-debug.apk.sha256) · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
 
 Aprire il link dal telefono e installare l’APK come aggiornamento, senza disinstallare o cancellare dati. In alternativa, dalla pagina del file su GitHub scegliere **Download raw file**. Il repository è pubblico.
 
@@ -14,7 +14,7 @@ Documentazione: [English](https://github.com/TheyKilledKenny/TgFM/blob/feature/a
 
 | Versione | APK | Codice | Sorgenti |
 |---|---|---|---|
-| 1.5.4 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.4-debug.apk) · [SHA-256](TgFM-1.5.4-debug.apk.sha256) | 13 | [412e55d](https://github.com/TheyKilledKenny/TgFM/commit/412e55d) |
+| 1.5.4 | [Scarica](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk) · [SHA-256](TgFM-1.5.4-debug.apk.sha256) | 13 | [412e55d](https://github.com/TheyKilledKenny/TgFM/commit/412e55d) |
 | 1.5.3 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.3-debug.apk) · [SHA-256](TgFM-1.5.3-debug.apk.sha256) | 11 | Workspace develop, modifiche UI non ancora committate |
 | 1.5.2 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk) · [SHA-256](TgFM-1.5.2-debug.apk.sha256) | 10 | [c7cb2aa](https://github.com/TheyKilledKenny/TgFM/commit/c7cb2aa9ac546dd0133fdc7175696a67b4e8e8c3) |
 | 1.5.1 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.1-debug.apk) · [SHA-256](TgFM-1.5.1-debug.apk.sha256) | 9 | [5c115bd](https://github.com/TheyKilledKenny/TgFM/commit/5c115bdb3daf2c2e8af6f97225ce0fd99c9aff3c) |
