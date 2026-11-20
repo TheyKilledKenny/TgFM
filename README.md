@@ -2,9 +2,9 @@
 
 This project is maintained by TheyKilledKenny. The code was written by a combination of human intelligence, caffeine, and Codex. 😄
 
-# TgFM — Telegram File Manager
+# TgFM - Telegram File Manager
 
-![TgFM — Telegram File Manager: select, save, and share your files](docs/assets/tgfm-cover.svg)
+![TgFM - Telegram File Manager: select, save, and share your files](docs/assets/tgfm-cover.svg)
 
 **Your Telegram files, organized your way.**
 
@@ -12,13 +12,13 @@ TgFM is a native Android app for browsing attachments in your Telegram channels 
 
 The app uses your personal Telegram account through **TDLib** and runs independently on your phone, without a computer or application server. The interface is in Italian.
 
-**[Download TgFM 1.5.3 for Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.3/TgFM-1.5.3.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.3/TgFM-1.5.3.apk.sha256) · [Installation](#installation-and-first-sign-in)
+**[Download TgFM 1.5.4 for Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk.sha256) · [Installation](#installation-and-first-sign-in)
 
 Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases), without an app store.
 
-[Release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) contains `TgFM-1.5.3.apk` and its SHA-256 checksum in the **Assets** section. If GitHub requires you to sign in, open the page in a browser with an account authorized to access the repository.
+[Release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contains `TgFM-1.5.4.apk` and its SHA-256 checksum in the **Assets** section.
 
-**Development APK:** [TgFM 1.5.4 — archive contents](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk.sha256). This is a debug build for trying the new feature, not a new stable release. Install the APK directly on the phone; no ADB is required.
+**Development build** · [Download the 1.5.5 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/c1201f6/TgFM-1.5.5-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/c1201f6/TgFM-1.5.5-debug.apk.sha256)
 
 ## Contents
 
@@ -27,7 +27,6 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 - [Installation and first sign-in](#installation-and-first-sign-in)
 - [Usage](#usage)
 - [Favorite channels and groups](#favorite-channels-and-groups)
-- [Filter groups and covers](#compact-filter-groups-and-covers-155-development)
 - [Configuring filters](#configuring-filters)
 - [Downloads and file management](#downloads-and-file-management)
 - [Sharing and saving](#sharing-and-saving)
@@ -37,7 +36,8 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 - [Architecture](#architecture)
 - [TDLib integration](#tdlib-integration)
 - [Third-party licenses](#third-party-licenses)
-- [Archive contents (1.5.4)](#archive-contents-154-development-version)
+- [Filter groups and covers](#compact-filter-groups-and-covers-155-development)
+- [Archive contents (1.5.4)](#archive-contents)
 - [Release notes](#release-notes)
 
 ## Features
@@ -73,7 +73,7 @@ The project includes only the ARM64 native library. For an x86/x86_64 emulator o
 
 ## Installation and first sign-in
 
-1. Download `TgFM-1.5.3.apk` from the **Assets** in [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) using the phone's browser. Open the `.apk` file from your downloads and choose **Install**. If Android asks, allow **Install unknown apps** for the browser or file manager you used. A computer, ADB, and USB debugging are not needed. To update an installed copy with the same signature, open the new APK without uninstalling the app or deleting its data.
+1. Download `TgFM-1.5.4.apk` from the **Assets** in [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) using the phone's browser. Open the `.apk` file from your downloads and choose **Install**. If Android asks, allow **Install unknown apps** for the browser or file manager you used. A computer, ADB, and USB debugging are not needed. To update an installed copy with the same signature, open the new APK without uninstalling the app or deleting its data.
 2. Open **Configura** (Configure), grant file access, and choose the folder under **File e cartella** (File and folder; default `Download/TgFM`). Under **Telegram**, enter your **API ID** and **API hash**, obtained from [my.telegram.org](https://my.telegram.org) under *API development tools*. These are Telegram app credentials, not a Bot API token. You do not need to rebuild the APK.
 3. Tap **Configura accesso** (Set up access), then enter your number with its international prefix, the received code, and your two-step verification password if required. The app also handles email steps requested by TDLib. Configura accesso starts a new session, deleting the previous Telegram database; you do not need to tap it on every launch after a successful login.
 4. Under **Configura → Canali preferiti** (Configure → Favorite channels), tap **Aggiorna elenco canali e gruppi** (Refresh channel and group list), search by name, and check the ones to add to favorites. For an invite-only channel, first join it using the official Telegram app.
@@ -128,8 +128,6 @@ In **Filtri**, tap a channel heading to collapse or expand its rules. The rule c
 Enable **Configura → File e cartella → Copertine dai messaggi precedenti** to show compact covers in Selezione (off by default). A photo in the immediately preceding message is associated with the next document, audio or video file. For a multipart archive, the photo preceding its first published part is used. An intervening text or other message breaks the association; web previews and stickers are not used.
 
 File names retain the full row width. Tap the cover or file name to see a larger image and the photo caption, separately from the file message's own caption. Preview images are loaded only for visible items, using small Telegram images in the existing clearable cache. Enabling covers does not select photos or include them in Save, Share or FTP operations. This association is a visual hint, not proof that the photo describes the file, and does not change filter criteria.
-
-Version 1.5.5 is currently a local development build; the published development APK linked above remains 1.5.4.
 
 ## Favorite channels and groups
 
@@ -236,7 +234,7 @@ Under **Configura → File e cartella**, **Cancella i download precedenti** (Del
 
 | Setting | Behavior |
 |---|---|
-| Disabled — default | Reuses an already saved and recognized attachment; keeps other files and replaces other files with the same name when the download starts |
+| Disabled - default | Reuses an already saved and recognized attachment; keeps other files and replaces other files with the same name when the download starts |
 | Enabled | First deletes files managed by TgFM in the current folder; other files and subfolders are not cleared |
 
 FTP does not apply this general cleanup. Overwriting files with the same name is destructive: an error can cause the previous file to be lost. No backups are kept. Names are sanitized; files with the same name in the same batch receive distinct names. A maximum of four downloads can proceed simultaneously, coordinating attachments with the same TDLib file ID.
@@ -245,7 +243,7 @@ FTP does not apply this general cleanup. Overwriting files with the same name is
 
 **Salva** (Save) on the Selezione page downloads files directly to the working folder. **Condividi** (Share) first performs the same save (reusing files already available), then opens Android sharing. If some saves fail, sharing does not start automatically: you can retry or share completed files from the Download page.
 
-Sharing uses `ACTION_SEND`/`ACTION_SEND_MULTIPLE`, `content://` URIs, and temporary read-only permissions. The provider exposes only complete files directly in the working folder, excluding cache and private data. It creates neither a staging folder nor an additional copy; the receiving app may make its own copies and impose limits on size, number, and format. Returning to TgFM does not confirm delivery to the recipient.
+Sharing uses `ACTION_SEND`/`ACTION_SEND_MULTIPLE`, `content://` URIs, and temporary read-only permissions. Receiving apps can read selected files or individual entries streamed from a saved archive. It creates neither a staging folder nor an additional copy; the receiving app may make its own copies and impose limits on size, number, and format. Returning to TgFM does not confirm delivery to the recipient.
 
 In Download, **Condividi** (Share), **Salva su FTP** (Save to FTP), the eye icon to open a file, and trash icons to delete a file or the selection are available. Local deletions do not change Telegram or the FTP server.
 
@@ -257,7 +255,7 @@ The confirmation for each upload lets you change **Conserva sul dispositivo** (K
 
 | Conserva al termine (Keep when finished) | Behavior |
 |---|---|
-| Off — default | One file at a time. After FTP confirmation the local copy is deleted, even if it came from Download |
+| Off - default | One file at a time. After FTP confirmation the local copy is deleted, even if it came from Download |
 | On | The file remains in the working folder; up to four simultaneous transfers |
 
 The early-upload behavior below applies to ordinary files without a per-upload subfolder. Archives are downloaded completely before their contents are read; archive groups are processed one at a time, with parallel downloads of their volumes. No extracted disk copy is created.
@@ -270,13 +268,13 @@ The local copy is deleted only after a positive final response from the server a
 
 Files with the same name on the server are overwritten directly. An error may leave an incomplete remote file and lose the previous file with the same name; no backups or temporary remote names are introduced. Speed depends on Telegram, the server, and the network; overlapping upload does not guarantee a speedup on every connection.
 
-## Archive contents (1.5.4 development version)
+## Archive contents
 
 Multipart archives appear as one item in Selezione and are grouped before filename filters. **Salva** keeps the original archive and its volumes. **Condividi** and **Salva su FTP** can use either the originals or all files inside, without writing extracted copies to the device. Configura provides the default choice, which can be changed for each operation.
 
 Keep the archive available while receiving apps read shared contents. FTP's **Conserva** keeps the original archive; otherwise the local volumes are deleted only after the entire archive's upload succeeds. The FTP confirmation also accepts a relative destination such as `copies/november`, without changing the saved configuration. Remote cleanup after a failed archive transfer requires confirmation.
 
-Supported naming conventions include `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` and `.zip.NNN`. Encrypted or unsupported archives can still be sent as originals. Actual format support depends on the bundled decoders. This development version has not been published as a release; the stable download above remains 1.5.3.
+Supported naming conventions include `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` and `.zip.NNN`. Encrypted or unsupported archives can still be sent as originals. Actual format support depends on the bundled decoders.
 
 ## Current limitations
 
@@ -367,7 +365,7 @@ On Windows, from PowerShell:
 
 With all variables configured, `app/build/outputs/apk/release/app-release.apk` is produced. Without the variables, `app-release-unsigned.apk` is produced and requires signing before installation. A partial signing configuration stops the build with an explicit message; a debug key is not used automatically.
 
-Official APKs are attached to [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). The `develop-apk` branch contains development APKs, including 1.5.4. To update an already installed app while keeping its data, the same application ID, a compatible signature, and an appropriate version code are required.
+Official APKs are attached to [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). The `develop-apk` branch contains development APKs. To update an already installed app while keeping its data, the same application ID, a compatible signature, and an appropriate version code are required.
 
 ## Architecture
 
@@ -424,15 +422,15 @@ The names Telegram and WhatsApp identify third-party services. TgFM is an indepe
 
 ## Release notes
 
-### 1.5.5 — Local development build
+### 1.5.5 — Development build
 
 Collapsible filter groups, expand/collapse all, optional preceding-photo covers and separate photo descriptions in file details. Version code 14.
 
-### 1.5.4 — Development build
+### 1.5.4 - Archive sharing and FTP
 
-Multipart grouping before filters; virtual sharing of archive contents; streaming decompression to FTP; per-upload FTP subfolders; confirmation before remote cleanup. Version code 13, ARM64 debug APK on `develop-apk`. The stable release remains 1.5.3.
+Multipart grouping before filters; virtual sharing of archive contents; streaming decompression to FTP; per-upload FTP subfolders; confirmation before remote cleanup. Version code 13, signed ARM64 release APK.
 
-### 1.5.3 — First stable release
+### 1.5.3 - First stable release
 
 - Interface reorganized into the four sections Selezione, Download, Filtri, and Configura.
 - Fixed controls above the navigation, compact lists, and full-width filenames in Selezione and Download.
@@ -445,14 +443,14 @@ The limitation of generation from examples by extension remains: use the manual 
 
 The package is **1.5.3**, version code **12**, ARM64 release APK with debugging disabled. The `v1.5.3` tag identifies the release source; the signed APK and checksum are attached to the GitHub Release. The signature is the same as previous packages: the app can be updated without uninstalling it or deleting its data. The version remains in the 1.5.x series.
 
-### 1.5.2 — Telegram access
+### 1.5.2 - Telegram access
 
 Fixed a TDLib initialization deadlock that could also prevent a new login. Removed commands for recovering previous access; Configura accesso starts a new session. Errors remain visible in the Telegram section.
 
-### 1.5.1 — File access
+### 1.5.1 - File access
 
 Fixed the storage access request and handling of the return from Android settings. The Telegram initialization issue was resolved in the following 1.5.2 release.
 
-### 1.5.0 — External folder and FTP
+### 1.5.0 - External folder and FTP
 
 External working folder with TDLib cache inside it, sharing of saved files, FTP/FTPS upload even during download, Keep when finished option, and individual or multiple deletion of local files.
