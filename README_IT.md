@@ -27,6 +27,7 @@ La [release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) 
 - [Installazione e primo accesso](#installazione-e-primo-accesso)
 - [Utilizzo](#utilizzo)
 - [Canali e gruppi preferiti](#canali-e-gruppi-preferiti)
+- [Gruppi filtri e copertine](#gruppi-filtri-e-copertine-sviluppo-155)
 - [Configurazione dei filtri](#configurazione-dei-filtri)
 - [Download e gestione dei file](#download-e-gestione-dei-file)
 - [Condivisione e salvataggio](#condivisione-e-salvataggio)
@@ -119,6 +120,16 @@ Si usa il fuso orario del telefono, rispettando anche i cambi di ora legale. Ogg
 Per i periodi delimitati TgFM usa `getChatMessageByDate` per raggiungere l'ultimo post entro la data finale, poi legge a ritroso e si ferma al primo post precedente alla data iniziale. Non percorre tutta la cronologia per filtrarla successivamente. La lettura riguarda soltanto i metadati, senza avviare download.
 
 I risultati vengono pubblicati a ogni pagina ricevuta e vengono applicate le regole del canale attivo. **Annulla operazione** interrompe le richieste successive mantenendo i nomi, i riferimenti e le selezioni automatiche già raccolti: la dicitura **Lettura parziale** distingue il risultato da una lettura completata. I risultati restano utilizzabili per selezione e download. Una nuova lettura sostituisce l'elenco; il cambio canale lo azzera. I metadati sono conservati in memoria, senza introdurre un archivio persistente o migrazioni dei dati.
+
+## Gruppi filtri e copertine (sviluppo 1.5.5)
+
+In **Filtri**, toccare l’intestazione di un canale per comprimere o espandere le sue regole. Restano visibili il totale e il numero di regole attive. **Comprimi tutti / Espandi tutti** agisce su tutti i gruppi; comprimere un gruppo non disattiva i filtri. Lo stato aperto/chiuso resta al cambio sezione e alla ricreazione della schermata.
+
+Attivare **Configura → File e cartella → Copertine dai messaggi precedenti** per mostrare copertine compatte in Selezione (opzione inizialmente spenta). Una foto nel messaggio immediatamente precedente viene associata al documento, file audio o video successivo. Per un archivio multipart vale la foto prima della prima parte pubblicata. Un messaggio intermedio interrompe l’associazione; anteprime dei link e sticker non sono utilizzati.
+
+Il nome del file mantiene tutta la larghezza della riga. Toccando copertina o nome si vedono l’immagine più grande e la didascalia della foto, separata dall’eventuale descrizione del messaggio del file. Le anteprime vengono caricate solo per le voci visibili, usando piccole immagini Telegram nella cache già eliminabile. Attivare le copertine non seleziona le foto e non le aggiunge a Salva, Condividi o FTP. L’associazione è un suggerimento visivo, non garantisce che la foto descriva il file e non modifica i criteri dei filtri.
+
+La versione 1.5.5 è al momento una build di sviluppo locale; l’APK di sviluppo pubblicato e collegato sopra resta 1.5.4.
 
 ## Canali e gruppi preferiti
 
@@ -412,6 +423,10 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un progetto indipendente.
 
 ## Note di rilascio
+
+### 1.5.5 — Build di sviluppo locale
+
+Gruppi filtri comprimibili, comando espandi/comprimi tutti, copertine opzionali dalle foto precedenti e descrizioni delle foto separate nei dettagli del file. Codice versione 14.
 
 ### 1.5.4 — Build di sviluppo
 

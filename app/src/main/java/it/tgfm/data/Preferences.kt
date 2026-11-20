@@ -18,6 +18,9 @@ object RuleJson {
 }
 fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else (0 until length()).map { getString(it) }
 class Preferences(context: Context, private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> = context.store) {
+ private val coversKey = booleanPreferencesKey("show_previous_photo_covers")
+ val showCovers = dataStore.data.map { it[coversKey] ?: false }.distinctUntilChanged()
+ suspend fun saveShowCovers(value: Boolean) { dataStore.edit { it[coversKey] = value } }
  private val archiveKey = booleanPreferencesKey("archive_contents")
  val archiveContents = dataStore.data.map { it[archiveKey] ?: false }
  suspend fun saveArchiveContents(value: Boolean) { dataStore.edit { it[archiveKey] = value } }

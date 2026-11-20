@@ -26,7 +26,7 @@ object ArchiveNames {
     val sorted = members.sortedBy { part(it.name)?.number ?: if(it.name.endsWith(".zip", true)) Int.MAX_VALUE else 0 }
     if(sorted.map { it.name.lowercase() }.distinct().size != sorted.size) return@flatMap members
     val first = sorted.first()
-    listOf(first.copy(name = part(first.name)?.name ?: first.name, size = sorted.sumOf { it.size }, parts = sorted, mime = when((part(first.name)?.name ?: first.name).substringAfterLast('.').lowercase()) { "rar" -> "application/vnd.rar"; "zip" -> "application/zip"; "7z" -> "application/x-7z-compressed"; else -> first.mime }))
+    listOf(first.copy(name = part(first.name)?.name ?: first.name, size = sorted.sumOf { it.size }, parts = sorted, cover = sorted.minBy { it.messageId }.cover, mime = when((part(first.name)?.name ?: first.name).substringAfterLast('.').lowercase()) { "rar" -> "application/vnd.rar"; "zip" -> "application/zip"; "7z" -> "application/x-7z-compressed"; else -> first.mime }))
    }
   }
  }

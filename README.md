@@ -27,6 +27,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 - [Installation and first sign-in](#installation-and-first-sign-in)
 - [Usage](#usage)
 - [Favorite channels and groups](#favorite-channels-and-groups)
+- [Filter groups and covers](#compact-filter-groups-and-covers-155-development)
 - [Configuring filters](#configuring-filters)
 - [Downloads and file management](#downloads-and-file-management)
 - [Sharing and saving](#sharing-and-saving)
@@ -119,6 +120,16 @@ The phone's time zone is used, including daylight saving time changes. Today is 
 For bounded periods, TgFM uses `getChatMessageByDate` to reach the last post within the end date, then reads backwards and stops at the first post before the start date. It does not traverse the entire history and filter it afterwards. Reading concerns metadata only and does not start downloads.
 
 Results are published as each page arrives and the active channel's rules are applied. **Annulla operazione** (Cancel operation) stops subsequent requests while retaining names, references, and automatic selections already collected: **Lettura parziale** (Partial read) distinguishes the result from a completed read. Results remain available for selection and download. A new read replaces the list; switching channels clears it. Metadata is kept in memory, without introducing persistent storage or data migrations.
+
+## Compact filter groups and covers (1.5.5 development)
+
+In **Filtri**, tap a channel heading to collapse or expand its rules. The rule count and enabled count remain visible. **Comprimi tutti / Espandi tutti** controls all groups; collapsing a group does not disable its filters. The open/closed state survives screen changes and activity recreation.
+
+Enable **Configura → File e cartella → Copertine dai messaggi precedenti** to show compact covers in Selezione (off by default). A photo in the immediately preceding message is associated with the next document, audio or video file. For a multipart archive, the photo preceding its first published part is used. An intervening text or other message breaks the association; web previews and stickers are not used.
+
+File names retain the full row width. Tap the cover or file name to see a larger image and the photo caption, separately from the file message's own caption. Preview images are loaded only for visible items, using small Telegram images in the existing clearable cache. Enabling covers does not select photos or include them in Save, Share or FTP operations. This association is a visual hint, not proof that the photo describes the file, and does not change filter criteria.
+
+Version 1.5.5 is currently a local development build; the published development APK linked above remains 1.5.4.
 
 ## Favorite channels and groups
 
@@ -412,6 +423,10 @@ To rebuild the native component or add other ABIs, follow the [upstream Android 
 The names Telegram and WhatsApp identify third-party services. TgFM is an independent project.
 
 ## Release notes
+
+### 1.5.5 — Local development build
+
+Collapsible filter groups, expand/collapse all, optional preceding-photo covers and separate photo descriptions in file details. Version code 14.
 
 ### 1.5.4 — Development build
 

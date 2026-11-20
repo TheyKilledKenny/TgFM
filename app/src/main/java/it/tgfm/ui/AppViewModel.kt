@@ -29,6 +29,7 @@ data class UiState(
  val message: String = "", val failures: List<String> = emptyList(), val retry: List<Attachment> = emptyList(),
  val activeDownloads: Map<Int, DownloadProgress> = emptyMap(),
  val workPath: String = "", val fileAccess: Boolean = false, val ftp: FtpSettings = FtpSettings(),
+ val showCovers: Boolean = false,
  val archiveContents: Boolean = false, val archiveDefault: Boolean = false,
  val archiveRename: String? = null, val remoteCleanup: List<String> = emptyList(),
  val loginError: String = "",
@@ -55,11 +56,23 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  private val fileLocks = ConcurrentHashMap<Int, Mutex>()
  private var operation: Job? = null
  @Volatile private var foregroundRecheckPending = false
+ private val coverSlots = kotlinx.coroutines.sync.Semaphore(2)
+ fun showCovers(value: Boolean) { viewModelScope.launch {
+  try { app.preferences.saveShowCovers(value) } catch(e: Exception) { notify("Impossibile salvare l'opzione copertine: ${e.message}") }
+ } }
+ suspend fun coverFile(id: Int): File? {
+  coverSlots.acquire()
+  try { return if(_state.value.showCovers && _state.value.auth == "authorizationStateReady") tg.cover(id) else null }
+  catch(e: CancellationException) { throw e }
+  catch(_: Exception) { return null }
+  finally { coverSlots.release() }
+ }
  private var renameReply: CompletableDeferred<String?>? = null
  fun answerArchiveName(name: String?) { renameReply?.complete(name) }
  fun archiveMode(contents: Boolean) { _state.update { it.copy(archiveContents = contents) } }
  fun archiveDefault(contents: Boolean) { viewModelScope.launch { app.preferences.saveArchiveContents(contents) } }
  init {
+  viewModelScope.launch { app.preferences.showCovers.collect { value -> _state.update { it.copy(showCovers = value) } } }
   viewModelScope.launch { app.preferences.archiveContents.collect { value -> _state.update { it.copy(archiveContents = value, archiveDefault = value) } } }
   viewModelScope.launch { app.preferences.configuration.catch { notify("Impossibile leggere canali e filtri: ${it.message}") }.collect { config ->
    applyConfiguration(config)
