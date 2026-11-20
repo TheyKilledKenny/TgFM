@@ -2,18 +2,15 @@ Questo progetto è mantenuto da TheyKilledKenny. Il codice è stato scritto da u
 
 # TgFM — APK di develop
 
-Branch unico per gli APK di sviluppo. La build corrente è **1.5.4**, codice versione **13**, ARM64, firmata con lo stesso certificato delle build precedenti. I sorgenti e i README aggiornati sono nel branch [feature/archive-content](https://github.com/TheyKilledKenny/TgFM/tree/feature/archive-content). La release stabile resta 1.5.3.
+La build di test corrente è **TgFM 1.5.5**, codice versione 14, per Android 8+ ARM64. Permette di comprimere i filtri per canale e di visualizzare la foto del messaggio precedente come copertina. Attiva **Configura → File e cartella → Copertine dai messaggi precedenti** e tocca il nome del file per leggere anche la didascalia.
 
-**[Scarica TgFM 1.5.4](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk)** · [SHA-256](TgFM-1.5.4-debug.apk.sha256) · [Collegamento stabile all’ultima build](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-debug.apk)
+**[Scarica l’APK di test 1.5.5](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/develop-apk/TgFM-1.5.5-debug.apk)** · [SHA-256](TgFM-1.5.5-debug.apk.sha256) · [Ultima build di test](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/develop-apk/TgFM-debug.apk)
 
-Aprire il link dal telefono e installare l’APK come aggiornamento, senza disinstallare o cancellare dati. In alternativa, dalla pagina del file su GitHub scegliere **Download raw file**. Il repository è pubblico.
-
-**1.5.4 aggiunge gli archivi virtuali:** raggruppamento multipart prima dei filtri; condivisione e FTP di tutto il contenuto senza copie estratte; preferenza in Configura; sottocartella FTP per singolo invio e conferma della pulizia remota. Con Conserva attivo resta l’archivio originale; se disattivato, FTP elimina le copie locali solo dopo l’invio riuscito dell’intero archivio. Gli archivi devono rimanere disponibili durante la lettura da parte delle app destinatarie.
-
-Documentazione: [English](https://github.com/TheyKilledKenny/TgFM/blob/feature/archive-content/README.md) · [Italiano](https://github.com/TheyKilledKenny/TgFM/blob/feature/archive-content/README_IT.md).
+Per la versione stabile consulta le [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases/latest). Documentazione della build di test in [italiano](https://github.com/TheyKilledKenny/TgFM/blob/feature/img_as_cover/README_IT.md) e [inglese](https://github.com/TheyKilledKenny/TgFM/blob/feature/img_as_cover/README.md).
 
 | Versione | APK | Codice | Sorgenti |
 |---|---|---|---|
+| 1.5.5 | [Scarica](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/develop-apk/TgFM-1.5.5-debug.apk) · [SHA-256](TgFM-1.5.5-debug.apk.sha256) | 14 | [7737d69](https://github.com/TheyKilledKenny/TgFM/commit/7737d69) |
 | 1.5.4 | [Scarica](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/650a41286424130283c290de4dc2896a2a08b25f/TgFM-1.5.4-debug.apk) · [SHA-256](TgFM-1.5.4-debug.apk.sha256) | 13 | [412e55d](https://github.com/TheyKilledKenny/TgFM/commit/412e55d) |
 | 1.5.3 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.3-debug.apk) · [SHA-256](TgFM-1.5.3-debug.apk.sha256) | 11 | Workspace develop, modifiche UI non ancora committate |
 | 1.5.2 | [Scarica](https://github.com/TheyKilledKenny/TgFM/raw/refs/heads/develop-apk/TgFM-1.5.2-debug.apk) · [SHA-256](TgFM-1.5.2-debug.apk.sha256) | 10 | [c7cb2aa](https://github.com/TheyKilledKenny/TgFM/commit/c7cb2aa9ac546dd0133fdc7175696a67b4e8e8c3) |
