@@ -12,11 +12,11 @@ TgFM è un'app Android nativa per consultare gli allegati dei propri canali e gr
 
 L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. L'interfaccia è in italiano.
 
-**[Scarica TgFM 1.5.3 per Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.3/TgFM-1.5.3.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.3/TgFM-1.5.3.apk.sha256) · [Installazione](#installazione-e-primo-accesso)
+**[Scarica TgFM 1.5.4 per Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk.sha256) · [Installazione](#installazione-e-primo-accesso)
 
 Android 8.0 o successivo · ARM64 · Distribuzione tramite [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases), senza store.
 
-La [release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) contiene `TgFM-1.5.3.apk` e il checksum SHA-256 nella sezione **Assets**. Se GitHub richiede l’accesso, aprire la pagina nel browser con un account autorizzato al repository.
+La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contiene `TgFM-1.5.4.apk` e il checksum SHA-256 nella sezione **Assets**.
 
 ## Indice
 
@@ -34,6 +34,7 @@ La [release 1.5.3](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.3) 
 - [Architettura](#architettura)
 - [Integrazione TDLib](#integrazione-tdlib)
 - [Licenze di terze parti](#licenze-di-terze-parti)
+- [Contenuto degli archivi (1.5.4)](#contenuto-degli-archivi)
 - [Note di rilascio](#note-di-rilascio)
 
 ## Funzionalità
@@ -69,7 +70,7 @@ Il progetto include soltanto la libreria nativa ARM64. Per un emulatore x86/x86_
 
 ## Installazione e primo accesso
 
-1. Scaricare `TgFM-1.5.3.apk` dagli **Assets** delle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) dal browser del telefono. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
+1. Scaricare `TgFM-1.5.4.apk` dagli **Assets** delle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) dal browser del telefono. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
 2. Aprire **Configura**, concedere l’accesso ai file e scegliere la cartella in **File e cartella** (default `Download/TgFM`). In **Telegram**, inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
 3. Premere **Configura accesso**, poi inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib. Configura accesso avvia una nuova sessione, eliminando il precedente database Telegram; non è necessario premerlo a ogni avvio dopo un login riuscito.
 4. In **Configura → Canali preferiti**, premere **Aggiorna elenco canali e gruppi**, cercare per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
@@ -231,7 +232,7 @@ FTP non applica questa pulizia generale. La sovrascrittura degli omonimi è dist
 
 **Salva**, nella pagina Selezione, scarica i file direttamente nella cartella di lavoro. **Condividi** esegue prima lo stesso salvataggio (riutilizzando i file già disponibili), quindi apre la condivisione Android. Se alcuni salvataggi falliscono, la condivisione non parte automaticamente: è possibile riprovare o condividere i completati dalla pagina Download.
 
-La condivisione usa `ACTION_SEND`/`ACTION_SEND_MULTIPLE`, URI `content://` e permessi temporanei di sola lettura. Il provider espone soltanto file completi direttamente nella cartella di lavoro, escludendo cache e dati privati. Non crea una cartella di preparazione né una copia aggiuntiva; l’app destinataria può fare proprie copie e imporre limiti di dimensione, numero e formato. Il ritorno a TgFM non certifica l’invio al destinatario.
+La condivisione usa `ACTION_SEND`/`ACTION_SEND_MULTIPLE`, URI `content://` e permessi temporanei di sola lettura. Le app destinatarie possono leggere i file selezionati o i singoli contenuti decompressi durante la lettura di un archivio salvato. Non crea una cartella di preparazione né una copia aggiuntiva; l’app destinataria può fare proprie copie e imporre limiti di dimensione, numero e formato. Il ritorno a TgFM non certifica l’invio al destinatario.
 
 In Download sono disponibili **Condividi**, **Salva su FTP**, l’occhio per aprire e i cestini per eliminare un file o la selezione. Le eliminazioni locali non modificano Telegram o il server FTP.
 
@@ -239,12 +240,14 @@ In Download sono disponibili **Condividi**, **Salva su FTP**, l’occhio per apr
 
 In **Configura → Server FTP**, configurare host, porta, utente, password e cartella remota già esistente. Salvare le modifiche prima di usare Verifica accesso. È usata la modalità passiva, con FTP binario oppure **FTPS esplicito (TLS)**. FTPS verifica catena e nome del certificato; non accetta automaticamente certificati non attendibili. FTP semplice non cifra credenziali e contenuto. **Verifica accesso** controlla login e cartella; non crea file remoti per provare la scrittura.
 
-La conferma di ogni invio consente di cambiare **Conserva sul dispositivo** solo per quell’operazione, partendo dalla preferenza salvata.
+La conferma di ogni invio consente di cambiare **Conserva sul dispositivo** solo per quell’operazione, partendo dalla preferenza salvata. Nella 1.5.4 mostra anche la destinazione e permette una sottocartella relativa, per esempio `copie/novembre`, creata se il server lo consente. La cartella base configurata non cambia.
 
 | Conserva al termine | Comportamento |
 |---|---|
 | Spento - predefinito | Un file per volta. Dopo la conferma FTP viene eliminata la copia locale, anche se proveniva da Download |
 | Acceso | Il file rimane nella cartella di lavoro; fino a quattro trasferimenti contemporanei |
+
+Il comportamento di invio anticipato descritto sotto riguarda i file ordinari senza sottocartella specifica per l’invio. Gli archivi vengono scaricati completamente prima della lettura del contenuto; i gruppi sono elaborati uno alla volta, con download parallelo dei volumi. Non vengono create copie estratte su disco.
 
 Da Download si inviano i file esistenti. Da Selezione si riutilizza l’allegato già salvato quando disponibile; altrimenti parte il download TDLib e l’upload può cominciare prima che sia terminato. Un singolo flusso FTP `STOR` legge soltanto i byte contigui confermati da `getFileDownloadedPrefixSize`, aspettando quando non sono ancora disponibili. La dimensione apparente del file parziale non viene usata come indicazione dei byte scaricati. Il buffer di lettura/invio è da 256 KiB; non si caricano interi file in RAM.
 
@@ -253,6 +256,14 @@ Il download resta **integrale sul dispositivo**: l’invio anticipato può sovra
 La copia locale viene eliminata soltanto dopo risposta finale positiva del server e verifica della dimensione, se il server supporta `SIZE`. Non basta aver scritto i byte nel socket. Non è prevista verifica hash remota universale. Un errore o annullamento conserva il file completo o il parziale nella cache; con Conserva disattivato la coda si arresta al primo errore per non accumulare altri file. La cache si elimina manualmente da Configura. Non ci sono riprese, recuperi o migrazioni automatici al riavvio.
 
 I nomi omonimi sul server sono sovrascritti direttamente. Un errore può lasciare un file remoto incompleto e perdere il vecchio omonimo; non vengono introdotti backup o nomi temporanei remoti. La velocità dipende da Telegram, server e rete; l’invio sovrapposto non garantisce un’accelerazione su ogni connessione.
+
+## Contenuto degli archivi
+
+Gli archivi multipart compaiono come una sola voce in Selezione e vengono raggruppati prima dei filtri sul nome. **Salva** conserva l’archivio originale e i suoi volumi. **Condividi** e **Salva su FTP** permettono di usare gli originali oppure tutti i file contenuti, senza creare copie estratte sul dispositivo. Configura offre la scelta iniziale, modificabile nella conferma di ogni operazione.
+
+L’archivio deve rimanere disponibile mentre le app destinatarie ne leggono i contenuti. **Conserva** su FTP mantiene l’archivio originale; se disattivato, i volumi locali vengono eliminati soltanto dopo il successo dell’invio di tutto il contenuto. La conferma FTP consente una destinazione relativa come `copie/novembre`, senza cambiare la configurazione salvata. Dopo un errore nell’invio di un archivio, l’eventuale pulizia remota richiede conferma.
+
+Sono riconosciuti i nomi `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` e `.zip.NNN`. Gli archivi cifrati o non supportati possono essere inviati come originali. Il supporto effettivo dei formati dipende dai decoder inclusi.
 
 ## Limiti attuali
 
@@ -343,7 +354,7 @@ Su Windows, da PowerShell:
 
 Con tutte le variabili configurate viene prodotto `app/build/outputs/apk/release/app-release.apk`. Senza variabili viene prodotto `app-release-unsigned.apk`, che richiede firma prima dell’installazione. Una configurazione di firma parziale interrompe la build con un messaggio esplicito; non viene usata automaticamente una chiave debug.
 
-Gli APK ufficiali sono allegati alle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). Il ramo `develop-apk` conserva i precedenti pacchetti di sviluppo. Per aggiornare un'app già installata mantenendone i dati servono lo stesso application ID, una firma compatibile e un codice versione adeguato.
+Gli APK ufficiali sono allegati alle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases). Il ramo `develop-apk` contiene gli APK di sviluppo. Per aggiornare un'app già installata mantenendone i dati servono lo stesso application ID, una firma compatibile e un codice versione adeguato.
 
 ## Architettura
 
@@ -363,7 +374,7 @@ app/src/main/
 └── AndroidManifest.xml
 ```
 
-I branch sorgente contengono il progetto Android, il README, la copertina e gli avvisi di licenza. APK, cache e strumenti locali di sviluppo sono separati; gli APK di rilascio sono allegati alle GitHub Releases e le precedenti build di sviluppo sono nel branch `develop-apk`.
+I branch sorgente contengono il progetto Android, il README, la copertina e gli avvisi di licenza. APK, cache e strumenti locali di sviluppo sono separati; gli APK di rilascio sono allegati alle GitHub Releases e le build di sviluppo sono nel branch `develop-apk`.
 
 ## Integrazione TDLib
 
@@ -391,12 +402,18 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 - **TDLib:** [Boost Software License 1.0](docs/licenses/TDLib-Boost-1.0.txt).
 - **OpenSSL:** [Apache License 2.0](docs/licenses/OpenSSL-Apache-2.0.txt).
 - **SQLite/SQLCipher incluso in TDLib:** [avviso BSD di ZETETIC LLC](docs/licenses/SQLite.txt).
+- **libarchive-android 1.1.6:** [wrapper Apache 2.0](docs/licenses/libarchive-android-Apache-2.0.txt), [avvisi libarchive](docs/licenses/libarchive.txt).
+- **Zip4j 2.11.5:** [Apache 2.0](docs/licenses/Zip4j-Apache-2.0.txt).
 - **Apache Commons Net 3.12.0:** [Apache License 2.0 e avviso](docs/licenses/Commons-Net.txt).
 - **AndroidX, Jetpack Compose, Kotlin e coroutines:** rispettive licenze e avvisi upstream; dipendenze dichiarate nella configurazione Gradle.
 
 I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un progetto indipendente.
 
 ## Note di rilascio
+
+### 1.5.4 - Condivisione degli archivi e FTP
+
+Raggruppamento multipart prima dei filtri, condivisione virtuale del contenuto, decompressione progressiva verso FTP, sottocartella FTP per invio e conferma della pulizia remota. Codice versione 13, APK release ARM64 firmato.
 
 ### 1.5.3 - Prima release stabile
 

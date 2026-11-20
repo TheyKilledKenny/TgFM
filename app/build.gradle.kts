@@ -9,7 +9,7 @@ android {
  ndkVersion = "27.2.12479018"
  defaultConfig {
   applicationId = "it.tgfm"; minSdk = 26; targetSdk = 35
-  versionCode = 12; versionName = "1.5.3"
+  versionCode = 13; versionName = "1.5.4"
   ndk { abiFilters += "arm64-v8a" }
  }
  val releaseSigning = listOf("TGFM_KEYSTORE", "TGFM_STORE_PASSWORD", "TGFM_KEY_ALIAS", "TGFM_KEY_PASSWORD").associateWith { System.getenv(it) }
@@ -44,6 +44,8 @@ val verifyTdlib by tasks.registering {
 }
 tasks.named("preBuild") { dependsOn(verifyTdlib) }
 dependencies {
+ implementation("me.zhanghai.android.libarchive:library:1.1.6")
+ implementation("net.lingala.zip4j:zip4j:2.11.5")
  implementation("commons-net:commons-net:3.12.0")
  implementation(platform("androidx.compose:compose-bom:2025.11.00"))
  implementation("androidx.compose.material3:material3")

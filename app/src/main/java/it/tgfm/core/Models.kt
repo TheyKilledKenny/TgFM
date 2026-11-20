@@ -4,7 +4,7 @@ import java.util.UUID
 
 enum class Category(val label: String) { DOCUMENT("Documento"), IMAGE("Immagine"), VIDEO("Video"), AUDIO("Audio"), STICKER("Sticker"), ANIMATION("Animazione"), OTHER("Altro") }
 enum class Match(val label: String) { CERTAIN("Certa"), POSSIBLE("Possibile"), NONE("Non corrispondente"), EXCLUDED("Escluso") }
-data class Attachment(val chatId: Long, val messageId: Long, val fileId: Int, val name: String, val mime: String = "", val size: Long = 0, val date: Long = 0, val caption: String = "", val category: Category = Category.DOCUMENT) {
+data class Attachment(val chatId: Long, val messageId: Long, val fileId: Int, val name: String, val mime: String = "", val size: Long = 0, val date: Long = 0, val caption: String = "", val category: Category = Category.DOCUMENT, val parts: List<Attachment> = emptyList()) {
  val key: String get() = "$chatId:$messageId:$fileId"
  val extension: String get() = name.substringAfterLast('.', "").lowercase(java.util.Locale.ROOT)
 }

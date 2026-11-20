@@ -18,6 +18,9 @@ object RuleJson {
 }
 fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else (0 until length()).map { getString(it) }
 class Preferences(context: Context, private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> = context.store) {
+ private val archiveKey = booleanPreferencesKey("archive_contents")
+ val archiveContents = dataStore.data.map { it[archiveKey] ?: false }
+ suspend fun saveArchiveContents(value: Boolean) { dataStore.edit { it[archiveKey] = value } }
  private val rulesKey = stringPreferencesKey("rules")
  private val channelKey = stringPreferencesKey("channel")
  private val favoritesKey = stringPreferencesKey("favorite_channels")

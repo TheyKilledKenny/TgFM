@@ -11,9 +11,16 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicReference
 
 /** One binary STOR stream per file; a positive final reply is mandatory before local deletion. */
-class FtpUploader(private val settings: FtpSettings) {
+class FtpUploader(private val settings: FtpSettings, private val subdirectory: String = "") {
  suspend fun upload(name: String, read: suspend (ByteArray) -> Int, progress: (Long) -> Unit): Long = session { ftp, data ->
-  require(name == FileNames.safe(name)) { "Nome FTP non valido." }
+  require(name == it.tgfm.core.ArchiveNames.safeEntry(name)) { "Nome FTP non valido." }
+  val directories = name.split('/').dropLast(1)
+  var prefix = ""
+  for(directory in directories) {
+   prefix += directory + "/"
+   // MKD may fail because the directory already exists; STOR remains authoritative.
+   ftp.makeDirectory(prefix)
+  }
   val output = ftp.storeFileStream(name) ?: error("Il server FTP non consente di scrivere il file (codice ${ftp.replyCode}).")
   data.set(output)
   var sent = 0L
@@ -47,6 +54,12 @@ class FtpUploader(private val settings: FtpSettings) {
   else check(ftp.replyCode in setOf(202, 500, 501, 502, 504)) { "Impossibile verificare la dimensione su FTP (codice ${ftp.replyCode}). File locale conservato." }
   sent
  }
+ suspend fun delete(names: List<String>) = session { ftp, _ ->
+  for(name in names) {
+   require(name == it.tgfm.core.ArchiveNames.safeEntry(name))
+   check(ftp.deleteFile(name)) { "Impossibile rimuovere da FTP: $name (codice ${ftp.replyCode})." }
+  }
+ }
  suspend fun test() = session { _, _ -> Unit }
  private suspend fun <T> session(block: suspend (FTPClient, AtomicReference<OutputStream?>) -> T): T = withContext(Dispatchers.IO) {
   settings.validate()
@@ -78,6 +91,14 @@ class FtpUploader(private val settings: FtpSettings) {
     ftp.enterLocalPassiveMode()
     check(ftp.setFileType(FTP.BINARY_FILE_TYPE)) { "Il server non supporta il trasferimento binario." }
     check(ftp.changeWorkingDirectory(settings.directory.ifBlank { "/" })) { "Cartella FTP non accessibile: configurala prima sul server." }
+    if(subdirectory.isNotEmpty()) {
+     require(subdirectory == it.tgfm.core.ArchiveNames.safeEntry(subdirectory))
+     for(part in subdirectory.split('/')) {
+      if(!ftp.changeWorkingDirectory(part)) {
+       check(ftp.makeDirectory(part) && ftp.changeWorkingDirectory(part)) { "Impossibile creare o aprire la sottocartella FTP: $part" }
+      }
+     }
+    }
     block(ftp, data)
    } finally {
     withContext(NonCancellable) { interrupt.cancelAndJoin() }
