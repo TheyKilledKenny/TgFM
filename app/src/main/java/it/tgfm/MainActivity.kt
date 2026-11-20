@@ -3,6 +3,8 @@ package it.tgfm
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.*
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,11 +35,13 @@ class MainActivity: ComponentActivity() {
   action()
  }
  private fun share(files: List<it.tgfm.core.Downloaded>, open: Boolean = false) {
+  lifecycleScope.launch {
   try {
-   val intent = ShareIntents.build(this, files, open)
+   val intent = withContext(Dispatchers.IO) { ShareIntents.build(this@MainActivity, files, open, vm.state.value.archiveContents) }
    startActivity(if (open) intent else Intent.createChooser(intent, "Condividi con…"))
   } catch (e: ActivityNotFoundException) { vm.notify("Nessuna applicazione compatibile disponibile.") }
   catch (e: Exception) { vm.notify(e.message ?: "File non disponibile per la condivisione.") }
+ }
  }
  private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
  override fun onResume() { super.onResume(); vm.onForeground() }
@@ -53,7 +57,7 @@ class MainActivity: ComponentActivity() {
      try { folder.launch(null) } catch (e: ActivityNotFoundException) { vm.notify("Selettore cartelle non disponibile.") }
     }, onStorageAccess = ::storageAccess,
     onSelectionShare = { transfer { vm.download(share = true) } },
-    onFtp = { local, keep -> transfer { vm.uploadFtp(local, keep) } },
+    onFtp = { local, keep, path -> transfer { vm.uploadFtp(local, keep, path) } },
     onDownload = { retry -> transfer { vm.download(retry) } })
   }
  }
