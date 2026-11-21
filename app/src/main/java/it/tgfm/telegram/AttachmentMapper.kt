@@ -6,6 +6,20 @@ import org.json.JSONObject
 
 /** Reads metadata only. Does not invoke any TDLib download or thumbnail request. */
 object AttachmentMapper {
+ fun coverFromMessage(message: JSONObject): CoverImage? {
+  val content = message.optJSONObject("content") ?: return null
+  // Exclude web previews, stickers and pictures embedded in unrelated content.
+  if(content.optString("@type") != "messagePhoto") return null
+  val photo = content.optJSONObject("photo") ?: return null
+  val miniature = photo.optJSONObject("minithumbnail")?.optString("data").orEmpty()
+  val sizes = photo.optJSONArray("sizes")
+  val small = if(sizes == null) null else (0 until sizes.length()).map { sizes.getJSONObject(it) }
+   .filter { it.optInt("width") in 1..400 && it.optInt("height") in 1..400 }
+   .maxByOrNull { it.optLong("width") * it.optLong("height") }
+  val file = small?.optJSONObject("photo")
+  val id = if(file != null && file.optLong("size") <= 256 * 1024 && file.optLong("expected_size") <= 256 * 1024) file.optInt("id") else 0
+  return CoverImage(id, miniature, content.optJSONObject("caption")?.optString("text").orEmpty())
+ }
  fun fromMessage(message: JSONObject): List<Attachment> {
   val result = linkedMapOf<Int, Attachment>()
   val content = message.optJSONObject("content") ?: return emptyList()

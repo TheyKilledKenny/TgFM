@@ -35,6 +35,14 @@ class TelegramReader(private val send: suspend (JSONObject) -> JSONObject) {
  suspend fun attachments(chatId: Long, window: PostWindow, progress: (List<Attachment>) -> Unit): List<Attachment> {
   val result = linkedMapOf<String, Attachment>()
   var cursor = 0L
+  val covers = PreviousMessageCovers()
+  fun accept(message: JSONObject, include: Boolean) {
+   val files = AttachmentMapper.fromMessage(message)
+   covers.accept(chatId, message.getLong("id"), files, AttachmentMapper.coverFromMessage(message)).forEach { decorated ->
+    if(decorated.key in result) result[decorated.key] = decorated
+   }
+   if(include) files.forEach { if(it.key !in result) result[it.key] = it }
+  }
   send(request("getChat", "chat_id" to chatId))
   if (window.endExclusive != null) {
    // Jump on Telegram to the last post in the requested period instead of walking newer history.
@@ -45,7 +53,7 @@ class TelegramReader(private val send: suspend (JSONObject) -> JSONObject) {
    }
    if (window.isBefore(anchor.getLong("date"))) { progress(emptyList()); return emptyList() }
    cursor = anchor.getLong("id")
-   if (window.contains(anchor.getLong("date"))) AttachmentMapper.fromMessage(anchor).forEach { result[it.key] = it }
+   if (window.contains(anchor.getLong("date"))) accept(anchor, true)
    progress(result.values.toList())
   }
   while (true) {
@@ -55,8 +63,8 @@ class TelegramReader(private val send: suspend (JSONObject) -> JSONObject) {
    for (i in 0 until messages.length()) {
     val message = messages.getJSONObject(i)
     val date = message.getLong("date")
-    if (window.isBefore(date)) { reachedStart = true; break }
-    if (window.contains(date)) AttachmentMapper.fromMessage(message).forEach { result[it.key] = it }
+    if (window.isBefore(date)) { accept(message, false); reachedStart = true; break }
+    if (window.contains(date)) accept(message, true)
    }
    // Publish each received page before another cancellable request.
    progress(result.values.toList())

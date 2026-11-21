@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.tgfm.core.*
 import it.tgfm.data.RuleJson
@@ -40,6 +41,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun TgfmScreen(vm: AppViewModel, onShare: (Downloaded?) -> Unit, onChooseFolder: () -> Unit, onStorageAccess: () -> Unit, onSelectionShare: () -> Unit, onFtp: (Boolean, Boolean, String) -> Unit, onDownload: (Boolean) -> Unit) {
  val s by vm.state.collectAsStateWithLifecycle()
+ var collapsedRuleGroups by rememberSaveable { mutableStateOf(listOf<String>()) }
  var settingsPage by rememberSaveable { mutableStateOf("") }
  var examplesPage by rememberSaveable { mutableStateOf(false) }
  var progressDetails by rememberSaveable { mutableStateOf(false) }
@@ -190,6 +192,13 @@ import java.time.format.DateTimeFormatter
          Text("Condividi e invia il contenuto degli archivi", Modifier.weight(1f))
         }
         Text("Scelta iniziale, modificabile a ogni invio. Gli archivi restano salvati; il contenuto viene letto senza copie estratte. Eliminando l'archivio si interrompe anche l'accesso delle app destinatarie.", style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+         Switch(s.showCovers, vm::showCovers, enabled = !s.busy)
+         Column(Modifier.weight(1f)) {
+          Text("Copertine dai messaggi precedenti")
+          Text("Mostra in Selezione la foto subito prima del file, con la sua descrizione nei dettagli. Scarica solo piccole anteprime, nella cache eliminabile.", style = MaterialTheme.typography.bodySmall)
+         }
+        }
         TextButton(onClick = { confirmAction = "cache" }, enabled = !s.busy && s.fileAccess) { Text("Svuota cache temporanea") }
        } }
         }
@@ -281,9 +290,32 @@ import java.time.format.DateTimeFormatter
         } }
         if (s.rules.isEmpty()) item { Text("Nessuna regola salvata. Crea un filtro oppure scegli Da esempi dopo aver letto un canale.") }
         if (s.favorites.isEmpty()) item { Text("Aggiungi almeno un canale preferito in Configura per assegnare i filtri.") }
-        s.rules.groupBy { it.channelId }.forEach { (channelId, rules) ->
-         item { Column(Modifier.padding(top = 12.dp, bottom = 4.dp)) { Text(s.favorites.firstOrNull { it.id == channelId }?.title ?: "Da assegnare", style = MaterialTheme.typography.titleMedium); Text("${rules.size} regole · ${rules.count { it.enabled }} attive", style = MaterialTheme.typography.bodySmall) } }
-         items(rules, key = { it.id }) { rule ->
+        val ruleGroups = s.rules.groupBy { it.channelId }
+        if(ruleGroups.size > 1) item {
+         val allCollapsed = ruleGroups.keys.all { it.toString() in collapsedRuleGroups }
+         TextButton(onClick = { collapsedRuleGroups = if(allCollapsed) emptyList() else ruleGroups.keys.map { it.toString() } }) {
+          Icon(if(allCollapsed) UiIcons.Down else UiIcons.Up, null, Modifier.size(18.dp))
+          Spacer(Modifier.width(6.dp))
+          Text(if(allCollapsed) "Espandi tutti" else "Comprimi tutti")
+         }
+        }
+        ruleGroups.forEach { (channelId, rules) ->
+         val groupKey = channelId.toString()
+         val collapsed = groupKey in collapsedRuleGroups
+         item(key = "rule-group:$groupKey") {
+          Row(Modifier.fillMaxWidth().padding(top = 8.dp).background(MaterialTheme.colorScheme.surfaceContainerLow)
+           .semantics { stateDescription = if(collapsed) "Compresso" else "Espanso" }
+           .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = if(collapsed) "Espandi regole" else "Comprimi regole") {
+            collapsedRuleGroups = if(collapsed) collapsedRuleGroups - groupKey else collapsedRuleGroups + groupKey
+           }.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+           Column(Modifier.weight(1f)) {
+            Text(s.favorites.firstOrNull { it.id == channelId }?.title ?: "Da assegnare", style = MaterialTheme.typography.titleSmall)
+            Text("${rules.size} regole · ${rules.count { it.enabled }} attive", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+           }
+           Icon(if(collapsed) UiIcons.Down else UiIcons.Up, null, Modifier.size(20.dp))
+          }
+         }
+         if(!collapsed) items(rules, key = { it.id }) { rule ->
           Column(Modifier.fillMaxWidth().testTag("rule:${rule.id}").padding(top = 6.dp)) {
            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(rule.title, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
@@ -384,10 +416,15 @@ import java.time.format.DateTimeFormatter
          Text(a.name, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.fillMaxWidth().clickable { attachmentDetails = a }.padding(start = 8.dp, end = 8.dp, top = 6.dp))
          Row(verticalAlignment = Alignment.CenterVertically) {
           Checkbox(a.key in s.selected, { vm.toggle(a.key) }, enabled = !s.busy, modifier = Modifier.semantics { contentDescription = "Seleziona ${a.name}" })
+          if(s.showCovers) a.cover?.let { cover ->
+           CoverThumbnail(cover, vm, Modifier.width(40.dp).height(46.dp).clickable(onClickLabel = "Apri copertina e descrizione") { attachmentDetails = a })
+           Spacer(Modifier.width(8.dp))
+          }
           Text("${sizeLabel(a.size)}" + if (a.date > 0) " · " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(a.date * 1000)) else "", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
           IconButton(onClick = { attachmentDetails = a }) { MatchIcon(match) }
          }
-         if (a.caption.isNotBlank()) Text(a.caption, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp).clickable { attachmentDetails = a })
+         val summary = a.caption.ifBlank { if(s.showCovers) a.cover?.caption.orEmpty() else "" }
+         if (summary.isNotBlank()) Text(summary, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp).clickable { attachmentDetails = a })
          HorizontalDivider()
         }
        }
@@ -430,7 +467,14 @@ import java.time.format.DateTimeFormatter
     Text("${a.category.label} · .${a.extension} · ${sizeLabel(a.size)}")
     if (a.date > 0) Text(DateFormat.getDateTimeInstance().format(Date(a.date * 1000)))
     Text(FilterEngine.classify(a, s.activeRules).label)
-    if (a.caption.isNotBlank()) Text(a.caption)
+    if(s.showCovers) a.cover?.let { cover ->
+     CoverThumbnail(cover, vm, Modifier.fillMaxWidth().heightIn(max = 220.dp).height(180.dp))
+     if(cover.caption.isNotBlank() && cover.caption != a.caption) {
+      Text("Descrizione della copertina", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+      androidx.compose.foundation.text.selection.SelectionContainer { Text(cover.caption) }
+     }
+    }
+    if (a.caption.isNotBlank()) androidx.compose.foundation.text.selection.SelectionContainer { Text(a.caption) }
    }
   }, confirmButton = { TextButton(onClick = { attachmentDetails = null }) { Text("Chiudi") } }) }
   if (s.ready && !s.busy && !s.fileAccess && !permissionPromptHandled) AlertDialog(

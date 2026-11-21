@@ -144,6 +144,15 @@ class TelegramClient(private val context: Context) {
   send(request("cancelDownloadFile", "file_id" to a.fileId, "only_if_pending" to false), 10_000)
   if (delete) send(request("deleteFile", "file_id" to a.fileId), 10_000)
  }
+ /** Low priority previews remain in TDLib's existing, user-clearable cache. */
+ suspend fun cover(fileId: Int): File {
+  val f = send(request("downloadFile", "file_id" to fileId, "priority" to 1, "offset" to 0, "limit" to 0, "synchronous" to true), 20_000)
+  val local = f.getJSONObject("local")
+  check(local.optBoolean("is_downloading_completed"))
+  return File(local.getString("path")).also {
+   check(it.isFile && it.length() <= 256 * 1024 && it.canonicalPath.startsWith(File(WorkFolder(context).cache, "tdlib").canonicalPath + File.separator))
+  }
+ }
  suspend fun download(a: Attachment): File {
   // Revalidate availability because channel messages may have expired since the scan.
   validateAttachment(a)
