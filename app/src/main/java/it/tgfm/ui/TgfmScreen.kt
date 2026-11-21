@@ -1,6 +1,7 @@
 package it.tgfm.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -412,21 +413,35 @@ import java.time.format.DateTimeFormatter
        }) }
        items(selectionFiles, key = { it.key }) { a ->
         val match = FilterEngine.classify(a, s.activeRules)
-        Column(Modifier.fillMaxWidth().background(if (a.key in s.selected) MaterialTheme.colorScheme.primary.copy(alpha = .055f) else Color.Transparent).testTag("attachment:${a.key}")) {
-         Text(a.name, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.fillMaxWidth().clickable { attachmentDetails = a }.padding(start = 8.dp, end = 8.dp, top = 6.dp))
-         Row(verticalAlignment = Alignment.CenterVertically) {
-          Checkbox(a.key in s.selected, { vm.toggle(a.key) }, enabled = !s.busy, modifier = Modifier.semantics { contentDescription = "Seleziona ${a.name}" })
-          if(s.showCovers) a.cover?.let { cover ->
-           CoverThumbnail(cover, vm, Modifier.width(40.dp).height(46.dp).clickable(onClickLabel = "Apri copertina e descrizione") { attachmentDetails = a })
-           Spacer(Modifier.width(8.dp))
+        val selected = a.key in s.selected
+        val cover = a.cover?.takeIf { s.showCovers && (it.fileId != 0 || it.miniature.isNotBlank()) }
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+         .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = .055f) else Color.Transparent)
+         .testTag("attachment:${a.key}")) {
+         Box(Modifier.width(if (s.showCovers) 64.dp else 48.dp).fillMaxHeight().heightIn(min = 48.dp)
+          .toggleable(value = selected, enabled = !s.busy, role = androidx.compose.ui.semantics.Role.Checkbox,
+           onValueChange = { vm.toggle(a.key) })
+          .semantics { contentDescription = "Seleziona ${a.name}" }.padding(3.dp), contentAlignment = Alignment.Center) {
+          if (cover != null) CoverThumbnail(cover, vm, Modifier.fillMaxSize())
+          Box(Modifier.align(if (cover == null) Alignment.Center else Alignment.BottomEnd)
+           .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.extraSmall)) {
+           Checkbox(checked = selected, onCheckedChange = null, enabled = !s.busy)
           }
-          Text("${sizeLabel(a.size)}" + if (a.date > 0) " · " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(a.date * 1000)) else "", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-          IconButton(onClick = { attachmentDetails = a }) { MatchIcon(match) }
          }
-         val summary = a.caption.ifBlank { if(s.showCovers) a.cover?.caption.orEmpty() else "" }
-         if (summary.isNotBlank()) Text(summary, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp).clickable { attachmentDetails = a })
-         HorizontalDivider()
+         Column(Modifier.weight(1f).heightIn(min = 48.dp)
+          .clickable(onClickLabel = "Apri anteprima") { attachmentDetails = a }
+          .padding(horizontal = 8.dp, vertical = 5.dp), verticalArrangement = Arrangement.Center) {
+          Text(a.name, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
+          val summary = a.caption.ifBlank { if (s.showCovers) a.cover?.caption.orEmpty() else "" }
+          if (summary.isNotBlank()) Text(summary, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+          Row(verticalAlignment = Alignment.CenterVertically) {
+           Text(sizeLabel(a.size) + if (a.date > 0) " · " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(a.date * 1000)) else "",
+            style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+           MatchIcon(match)
+          }
+         }
         }
+        HorizontalDivider()
        }
        item { ExpandableInfo("Selezione manuale e dettagli") { Text("La selezione manuale vale per questa operazione e non modifica i filtri. Seleziona tutti include anche i file nascosti dalla ricerca o dalla vista. Tocca il nome o il simbolo di un file per leggere tutti i dettagli.", style = MaterialTheme.typography.bodySmall) } }
       }

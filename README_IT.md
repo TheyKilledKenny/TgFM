@@ -18,7 +18,7 @@ Android 8.0 o successivo · ARM64 · Distribuzione tramite [GitHub Releases](htt
 
 La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contiene `TgFM-1.5.4.apk` e il checksum SHA-256 nella sezione **Assets**.
 
-**Build di sviluppo** · [Scarica l’APK di test 1.5.5](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/c1201f6/TgFM-1.5.5-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/c1201f6/TgFM-1.5.5-debug.apk.sha256)
+**Build di sviluppo** · [Scarica l’APK di test 1.5.6](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.6-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.6-debug.apk.sha256)
 
 ## Indice
 
@@ -127,7 +127,7 @@ In **Filtri**, toccare l’intestazione di un canale per comprimere o espandere 
 
 Attivare **Configura → File e cartella → Copertine dai messaggi precedenti** per mostrare copertine compatte in Selezione (opzione inizialmente spenta). Una foto nel messaggio immediatamente precedente viene associata al documento, file audio o video successivo. Per un archivio multipart vale la foto prima della prima parte pubblicata. Un messaggio intermedio interrompe l’associazione; anteprime dei link e sticker non sono utilizzati.
 
-Il nome del file mantiene tutta la larghezza della riga. Toccando copertina o nome si vedono l’immagine più grande e la didascalia della foto, separata dall’eventuale descrizione del messaggio del file. Le anteprime vengono caricate solo per le voci visibili, usando piccole immagini Telegram nella cache già eliminabile. Attivare le copertine non seleziona le foto e non le aggiunge a Salva, Condividi o FTP. L’associazione è un suggerimento visivo, non garantisce che la foto descriva il file e non modifica i criteri dei filtri.
+Tocca la colonna sinistra per selezionare il file. Sulla copertina compare la spunta. I file senza copertina hanno una checkbox standard nella stessa colonna. Tocca il resto della tessera per aprire l’anteprima con le didascalie. In modalità copertina le foto usate come copertine vengono nascoste ed escluse dalla selezione automatica e da Seleziona tutti. Disattivando la modalità ricompaiono subito.
 
 ## Canali e gruppi preferiti
 
@@ -421,6 +421,10 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un progetto indipendente.
 
 ## Note di rilascio
+
+### 1.5.6 - Selezione tramite copertina
+
+La copertina seleziona il file associato. Le foto usate come copertine sono escluse dall’elenco selezionabile. APK di test ARM64, codice versione 15.
 
 ### 1.5.5 — Build di sviluppo
 

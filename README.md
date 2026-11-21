@@ -18,7 +18,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 
 [Release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contains `TgFM-1.5.4.apk` and its SHA-256 checksum in the **Assets** section.
 
-**Development build** · [Download the 1.5.5 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/c1201f6/TgFM-1.5.5-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/c1201f6/TgFM-1.5.5-debug.apk.sha256)
+**Development build** · [Download the 1.5.6 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.6-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.6-debug.apk.sha256)
 
 ## Contents
 
@@ -127,7 +127,7 @@ In **Filtri**, tap a channel heading to collapse or expand its rules. The rule c
 
 Enable **Configura → File e cartella → Copertine dai messaggi precedenti** to show compact covers in Selezione (off by default). A photo in the immediately preceding message is associated with the next document, audio or video file. For a multipart archive, the photo preceding its first published part is used. An intervening text or other message breaks the association; web previews and stickers are not used.
 
-File names retain the full row width. Tap the cover or file name to see a larger image and the photo caption, separately from the file message's own caption. Preview images are loaded only for visible items, using small Telegram images in the existing clearable cache. Enabling covers does not select photos or include them in Save, Share or FTP operations. This association is a visual hint, not proof that the photo describes the file, and does not change filter criteria.
+Tap the left column to select the file. Its cover shows the selection indicator. Files without covers use a standard checkbox in the same column. Tap the rest of the row for the preview and captions. In cover mode, photos used as covers are hidden from the list and excluded from automatic selection and Select all. Switching cover mode off shows them again immediately.
 
 ## Favorite channels and groups
 
@@ -421,6 +421,10 @@ To rebuild the native component or add other ABIs, follow the [upstream Android 
 The names Telegram and WhatsApp identify third-party services. TgFM is an independent project.
 
 ## Release notes
+
+### 1.5.6 - Cover selection
+
+The cover selects its file. Cover photos are excluded from the selectable list. ARM64 test APK, version code 15.
 
 ### 1.5.5 — Development build
 

@@ -18,7 +18,7 @@ object AttachmentMapper {
    .maxByOrNull { it.optLong("width") * it.optLong("height") }
   val file = small?.optJSONObject("photo")
   val id = if(file != null && file.optLong("size") <= 256 * 1024 && file.optLong("expected_size") <= 256 * 1024) file.optInt("id") else 0
-  return CoverImage(id, miniature, content.optJSONObject("caption")?.optString("text").orEmpty())
+  return CoverImage(id, miniature, content.optJSONObject("caption")?.optString("text").orEmpty(), message.getLong("id"))
  }
  fun fromMessage(message: JSONObject): List<Attachment> {
   val result = linkedMapOf<Int, Attachment>()

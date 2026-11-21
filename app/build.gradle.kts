@@ -9,7 +9,7 @@ android {
  ndkVersion = "27.2.12479018"
  defaultConfig {
   applicationId = "it.tgfm"; minSdk = 26; targetSdk = 35
-  versionCode = 14; versionName = "1.5.5"
+  versionCode = 15; versionName = "1.5.6"
   ndk { abiFilters += "arm64-v8a" }
  }
  val releaseSigning = listOf("TGFM_KEYSTORE", "TGFM_STORE_PASSWORD", "TGFM_KEY_ALIAS", "TGFM_KEY_PASSWORD").associateWith { System.getenv(it) }

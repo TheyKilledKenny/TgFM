@@ -22,6 +22,7 @@ import org.json.JSONObject
 data class UiState(
  val tab: Int = AppTab.SETTINGS.ordinal, val auth: String = "notStarted", val authInfo: String = "", val connection: String = "Non connesso",
  val rules: List<Rule> = emptyList(), val favorites: List<Channel> = emptyList(), val channels: List<Channel> = emptyList(), val channel: Channel? = null,
+ val allAttachments: List<Attachment> = emptyList(),
  val attachments: List<Attachment> = emptyList(), val selected: Set<String> = emptySet(), val attachmentView: AttachmentView = AttachmentView.ALL, val clearBeforeDownload: Boolean = false,
  val postPeriod: PostPeriod = PostPeriod(), val scannedPeriod: String = "", val scanComplete: Boolean = false,
  val downloads: List<Downloaded> = emptyList(), val downloadedSelection: Set<String> = emptySet(),
@@ -36,9 +37,22 @@ data class UiState(
  val shareFiles: List<Downloaded> = emptyList(), val ready: Boolean = false
 ) {
  val activeRules: List<Rule> get() = if (channel == null) emptyList() else rules.filter { it.channelId == channel.id }
+ fun withFiles(files: List<Attachment>, covers: Boolean, applyFilters: Boolean): UiState {
+  val usedPhotos = if (covers) files.mapNotNull { file ->
+   file.cover?.messageId?.let { file.chatId to it }
+  }.toHashSet() else emptySet()
+  val eligible = if (usedPhotos.isEmpty()) files else files.filterNot {
+   it.category == Category.IMAGE && (it.chatId to it.messageId) in usedPhotos
+  }
+  val selection = eligible.filter {
+   if (applyFilters) FilterEngine.classify(it, activeRules) == Match.CERTAIN else it.key in selected
+  }.mapTo(mutableSetOf()) { it.key }
+  return copy(allAttachments = files, attachments = eligible, selected = selection, showCovers = covers)
+ }
  fun withConfiguration(config: ChannelConfiguration): UiState {
   val changedChannel = channel?.id != config.channel?.id
   val base = copy(favorites = config.favorites, channel = config.channel, rules = config.rules,
+   allAttachments = if (changedChannel) emptyList() else allAttachments,
    attachments = if (changedChannel) emptyList() else attachments,
    selected = if (changedChannel) emptySet() else selected,
    scannedPeriod = if (changedChannel) "" else scannedPeriod, scanComplete = if (changedChannel) false else scanComplete)
@@ -72,7 +86,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  fun archiveMode(contents: Boolean) { _state.update { it.copy(archiveContents = contents) } }
  fun archiveDefault(contents: Boolean) { viewModelScope.launch { app.preferences.saveArchiveContents(contents) } }
  init {
-  viewModelScope.launch { app.preferences.showCovers.collect { value -> _state.update { it.copy(showCovers = value) } } }
+  viewModelScope.launch { app.preferences.showCovers.collect { value -> _state.update { it.withFiles(it.allAttachments, value, applyFilters = false) } } }
   viewModelScope.launch { app.preferences.archiveContents.collect { value -> _state.update { it.copy(archiveContents = value, archiveDefault = value) } } }
   viewModelScope.launch { app.preferences.configuration.catch { notify("Impossibile leggere canali e filtri: ${it.message}") }.collect { config ->
    applyConfiguration(config)
@@ -83,7 +97,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   viewModelScope.launch { tg.auth.collect { auth ->
    _state.update { it.copy(auth = auth.optString("@type"), authInfo = authDescription(auth)) }
    routeForConfiguration()
-   if (auth.optString("@type") == "authorizationStateClosed") _state.update { it.copy(channels = emptyList(), attachments = emptyList(), selected = emptySet(), scannedPeriod = "", scanComplete = false) }
+   if (auth.optString("@type") == "authorizationStateClosed") _state.update { it.copy(channels = emptyList(), allAttachments = emptyList(), attachments = emptyList(), selected = emptySet(), scannedPeriod = "", scanComplete = false) }
   } }
   viewModelScope.launch { tg.connection.collect { connection -> _state.update { it.copy(connection = connection) } } }
   viewModelScope.launch { tg.errors.collect { error -> notify(error); if (_state.value.auth != "authorizationStateReady") _state.update { it.copy(loginError = error) } } }
@@ -215,7 +229,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  fun resendCode() = launchOperation("Richiesta nuovo codice…") { tg.send(request("resendAuthenticationCode", "reason" to null)) }
  fun logout() = launchOperation("Disconnessione…") {
   tg.send(request("logOut")); app.preferences.saveChannel(null)
-  _state.update { it.copy(attachments = emptyList(), selected = emptySet(), channels = emptyList(), channel = null, retry = emptyList(), scannedPeriod = "", scanComplete = false) }
+  _state.update { it.copy(allAttachments = emptyList(), attachments = emptyList(), selected = emptySet(), channels = emptyList(), channel = null, retry = emptyList(), scannedPeriod = "", scanComplete = false) }
  }
  fun loadChannels() = launchOperation("Lettura canali…") {
   val channels = tg.channels { channels -> _state.update { it.copy(channels = channels, progress = "${channels.size} canali e gruppi individuati…") } }
@@ -275,16 +289,16 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   val period = _state.value.postPeriod
   val today = java.time.LocalDate.now()
   val window = period.window(today)
-  _state.update { it.copy(attachments = emptyList(), selected = emptySet(), scannedPeriod = period.description(today), scanComplete = false) }
-  val files = tg.attachments(channel.id, window) { files -> _state.update { s -> s.copy(
-   attachments = ArchiveNames.group(files),
-   selected = ArchiveNames.group(files).filter { FilterEngine.classify(it, s.activeRules) == Match.CERTAIN }.map { it.key }.toSet(),
-   progress = "${files.size} allegati individuati…") } }
+  _state.update { it.copy(allAttachments = emptyList(), attachments = emptyList(), selected = emptySet(), scannedPeriod = period.description(today), scanComplete = false) }
+  val files = tg.attachments(channel.id, window) { page ->
+   val grouped = ArchiveNames.group(page)
+   _state.update { s -> s.withFiles(grouped, s.showCovers, applyFilters = true).copy(progress = "${page.size} allegati individuati…") }
+  }
   _state.update { it.copy(scanComplete = true) }
   notify(if (files.isEmpty()) "Nessun allegato disponibile." else "${files.size} allegati letti; ${_state.value.selected.size} corrispondenze certe selezionate.")
  }
  fun toggle(key: String, local: Boolean = false) { if (_state.value.busy) return; _state.update { s ->
-  if (local) s.copy(downloadedSelection = s.downloadedSelection.toggle(key)) else s.copy(selected = s.selected.toggle(key))
+  if (local) s.copy(downloadedSelection = s.downloadedSelection.toggle(key)) else if (s.attachments.any { it.key == key }) s.copy(selected = s.selected.toggle(key)) else s
  } }
  fun selectAll(local: Boolean, value: Boolean) { if (_state.value.busy) return; _state.update { s ->
   if (local) s.copy(downloadedSelection = if (value) s.downloads.map { it.path }.toSet() else emptySet())
