@@ -1,5 +1,8 @@
 package it.tgfm.data
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -63,7 +66,7 @@ class Preferences(context: Context, private val dataStore: androidx.datastore.co
  val rules = configuration.map { it.rules }.distinctUntilChanged()
  val channel = configuration.map { it.channel }.distinctUntilChanged()
  suspend fun saveRules(rules: List<Rule>) = editConfiguration { config ->
-  require(rules.all { it.channelId == null || config.favorites.any { c -> c.id == it.channelId } }) { "Assegna i filtri a un canale preferito." }
+  require(rules.all { it.channelId == null || config.favorites.any { c -> c.id == it.channelId } }) { Words.get(R.string.assign_filters_to_a_favorite_channel) }
   config.copy(rules = rules)
  }
  // Used also to migrate the former single-channel configuration.
@@ -80,7 +83,7 @@ class Preferences(context: Context, private val dataStore: androidx.datastore.co
    channel = if (config.channel?.id == id) favorites.firstOrNull() else config.channel)
  }
  suspend fun selectFavorite(id: Long) = editConfiguration { config ->
-  config.copy(channel = requireNotNull(config.favorites.firstOrNull { it.id == id }) { "Scegli un canale tra i preferiti." })
+  config.copy(channel = requireNotNull(config.favorites.firstOrNull { it.id == id }) { Words.get(R.string.choose_a_favorite_channel) })
  }
  suspend fun updateFavoriteTitles(channels: List<Channel>) = editConfiguration { config ->
   val byId = channels.associateBy { it.id }

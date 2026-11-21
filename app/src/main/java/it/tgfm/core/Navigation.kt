@@ -1,7 +1,11 @@
 package it.tgfm.core
 
-enum class AppTab(val label: String, val symbol: String) {
- SELECTION("Selezione", "☑"), DOWNLOADS("Download", "↓"), FILTERS("Filtri", "≡"), SETTINGS("Configura", "◎")
+import it.tgfm.R
+import it.tgfm.Words
+
+enum class AppTab(private val labelId: Int, val symbol: String) {
+ SELECTION(R.string.selection, "☑"), DOWNLOADS(R.string.downloads, "↓"), FILTERS(R.string.filters, "≡"), SETTINGS(R.string.settings, "◎");
+ val label: String get() = Words.get(labelId)
 }
 object NavigationPolicy {
  // Transport reconnects after backgrounding must not gate access to cached selection.

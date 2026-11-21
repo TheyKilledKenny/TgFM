@@ -10,7 +10,7 @@ This project is maintained by TheyKilledKenny. The code was written by a combina
 
 TgFM is a native Android app for browsing attachments in your Telegram channels and groups, selecting them using configurable rules, saving them to a folder of your choice, sharing them, or sending them to an FTP/FTPS server.
 
-The app uses your personal Telegram account through **TDLib** and runs independently on your phone, without a computer or application server. The interface is in Italian.
+The app uses your personal Telegram account through **TDLib** and runs independently on your phone, without a computer or application server. In the development build, TgFM follows your Android language preferences, supports English and Italian, and falls back to English. To override the system choice, open **Settings → App language** and select **English** or **Italiano**. Choose **System default** to follow Android again.
 
 **[Download TgFM 1.5.4 for Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk.sha256) · [Installation](#installation-and-first-sign-in)
 
@@ -18,7 +18,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 
 [Release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contains `TgFM-1.5.4.apk` and its SHA-256 checksum in the **Assets** section.
 
-**Development build** · [Download the 1.5.6 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.6-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.6-debug.apk.sha256)
+**Development build** · [Download the 1.5.7 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.7-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.7-debug.apk.sha256)
 
 ## Contents
 
@@ -421,6 +421,10 @@ To rebuild the native component or add other ABIs, follow the [upstream Android 
 The names Telegram and WhatsApp identify third-party services. TgFM is an independent project.
 
 ## Release notes
+
+### 1.5.7 - App language
+
+English and Italian are available for navigation, dialogs, accessibility labels and transfer messages. On Android 13 and later, you can also change the language in Android’s per-app language settings.
 
 ### 1.5.6 - Cover selection
 

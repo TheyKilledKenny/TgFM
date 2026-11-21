@@ -1,5 +1,8 @@
 package it.tgfm.data
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import it.tgfm.core.ArchiveNames
 import java.io.Closeable
 import java.io.File
@@ -19,14 +22,14 @@ class ArchiveReader(private val files: List<File>) : Closeable {
  private var index = -1
  init {
   try {
-   require(files.isNotEmpty() && files.all { it.isFile }) { "Parti dell'archivio non disponibili." }
-   if(files.any { Regex("(?i).*\\.r\\d{2,}$").matches(it.name) }) require(files.any { it.name.endsWith(".rar", true) && ArchiveNames.part(it.name)==null }) { "Manca il volume iniziale .rar." }
-   if(files.any { Regex("(?i).*\\.z\\d{2,}$").matches(it.name) }) require(files.any { it.name.endsWith(".zip", true) }) { "Manca il volume finale .zip." }
+   require(files.isNotEmpty() && files.all { it.isFile }) { Words.get(R.string.archive_parts_unavailable) }
+   if(files.any { Regex("(?i).*\\.r\\d{2,}$").matches(it.name) }) require(files.any { it.name.endsWith(".rar", true) && ArchiveNames.part(it.name)==null }) { Words.get(R.string.missing_initial_rar_volume) }
+   if(files.any { Regex("(?i).*\\.z\\d{2,}$").matches(it.name) }) require(files.any { it.name.endsWith(".zip", true) }) { Words.get(R.string.missing_final_zip_volume) }
    val numbered = files.mapNotNull { ArchiveNames.part(it.name) }
    if(numbered.isNotEmpty()) {
     val numbers = numbered.map { it.number }.sorted()
     val expected = if(files.any { it.name.endsWith(".rar", true) && ArchiveNames.part(it.name)==null }) 1 else numbered.first().first
-    require(numbers.first() == expected && numbers.zipWithNext().all { (a,b) -> b==a+1 }) { "Mancano parti dell'archivio. Amplia il periodo di lettura." }
+    require(numbers.first() == expected && numbers.zipWithNext().all { (a,b) -> b==a+1 }) { Words.get(R.string.archive_parts_are_missing_try_a_wider) }
    }
    if(zip == null) {
    Archive.readSupportFilterAll(handle)
@@ -52,7 +55,7 @@ class ArchiveReader(private val files: List<File>) : Closeable {
    while(++index < headers.size) {
     val header = headers[index]
     if(header.isDirectory) continue
-    require(!header.isEncrypted) { "Archivio protetto da password: invialo come archivio originale." }
+    require(!header.isEncrypted) { Words.get(R.string.password_protected_archive_send_the_original_instead) }
     zipInput = zip.getInputStream(header)
     return Entry(index, ArchiveNames.safeEntry(header.fileName), header.uncompressedSize)
    }
@@ -62,16 +65,16 @@ class ArchiveReader(private val files: List<File>) : Closeable {
    val entry = Archive.readNextHeader(handle)
    if (entry == 0L) return null
    index++
-   require(ArchiveEntry.hardlink(entry) == null && ArchiveEntry.symlink(entry) == null) { "Collegamenti nell'archivio non supportati." }
+   require(ArchiveEntry.hardlink(entry) == null && ArchiveEntry.symlink(entry) == null) { Words.get(R.string.links_inside_archives_are_unsupported) }
    val type = ArchiveEntry.filetype(entry)
    if (type == 0x4000) continue
-   require(type == 0x8000 || type == 0) { "Tipo di file non supportato nell'archivio." }
-   val name = ArchiveEntry.pathnameUtf8(entry) ?: ArchiveEntry.pathname(entry)?.toString(Charsets.UTF_8) ?: error("Nome mancante nell'archivio.")
+   require(type == 0x8000 || type == 0) { Words.get(R.string.unsupported_file_type_inside_the_archive) }
+   val name = ArchiveEntry.pathnameUtf8(entry) ?: ArchiveEntry.pathname(entry)?.toString(Charsets.UTF_8) ?: error(Words.get(R.string.missing_filename_inside_the_archive))
    return Entry(index, ArchiveNames.safeEntry(name), ArchiveEntry.size(entry))
   }
  }
  fun seekEntry(target: Int): Entry {
-  while (true) { val entry = next() ?: error("File non trovato nell'archivio."); if (entry.index == target) return entry }
+  while (true) { val entry = next() ?: error(Words.get(R.string.file_not_found_in_the_archive)); if (entry.index == target) return entry }
  }
  fun read(bytes: ByteArray, count: Int = bytes.size): Int {
   if(zip != null) return requireNotNull(zipInput).read(bytes, 0, count)

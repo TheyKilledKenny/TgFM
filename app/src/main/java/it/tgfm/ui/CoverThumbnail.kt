@@ -1,5 +1,8 @@
 package it.tgfm.ui
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.foundation.Image
@@ -34,7 +37,7 @@ import kotlinx.coroutines.withContext
  }
  if(cover.fileId != 0 || cover.miniature.isNotBlank()) {
   val bitmap = preview
-  if(bitmap == null) Box(modifier) else Image(bitmap, contentDescription = "Copertina dal messaggio precedente", modifier = modifier, contentScale = ContentScale.Fit)
+  if(bitmap == null) Box(modifier) else Image(bitmap, contentDescription = Words.get(R.string.cover_from_previous_message), modifier = modifier, contentScale = ContentScale.Fit)
  }
 }
 private fun decodePreview(bytes: ByteArray): ImageBitmap? {

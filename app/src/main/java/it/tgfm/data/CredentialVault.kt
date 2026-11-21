@@ -1,5 +1,8 @@
 package it.tgfm.data
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -36,7 +39,7 @@ class CredentialVault(context: Context) {
   val json = JSONObject().put("host", value.host).put("port", value.port).put("user", value.user).put("password", value.password).put("directory", value.directory).put("tls", value.tls).put("keep", value.keep).toString()
   val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
   val encrypted = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(cipher.doFinal(json.toByteArray()), Base64.NO_WRAP)
-  check(prefs.edit().putString("ftp", encrypted).commit()) { "Impossibile salvare la configurazione FTP." }
+  check(prefs.edit().putString("ftp", encrypted).commit()) { Words.get(R.string.could_not_save_ftp_settings) }
  }
  fun load(): Credentials? {
   val encrypted = prefs.getString("encrypted", null) ?: return null
@@ -47,12 +50,12 @@ class CredentialVault(context: Context) {
   return Credentials(json.getInt("id"), json.getString("hash"), json.getString("key"))
  }
  fun saveNew(apiId: Int, apiHash: String): Credentials {
-  require(apiId > 0 && Regex("[a-fA-F0-9]{32}").matches(apiHash)) { "API ID o API hash non validi." }
+  require(apiId > 0 && Regex("[a-fA-F0-9]{32}").matches(apiHash)) { Words.get(R.string.invalid_api_id_or_api_hash) }
   val databaseKey = Base64.encodeToString(ByteArray(32).also { SecureRandom().nextBytes(it) }, Base64.NO_WRAP)
   val json = JSONObject().put("id", apiId).put("hash", apiHash).put("key", databaseKey).toString()
   val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
   val encrypted = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(cipher.doFinal(json.toByteArray()), Base64.NO_WRAP)
-  check(prefs.edit().putString("encrypted", encrypted).commit()) { "Impossibile salvare le credenziali." }
+  check(prefs.edit().putString("encrypted", encrypted).commit()) { Words.get(R.string.could_not_save_credentials) }
   return Credentials(apiId, apiHash, databaseKey)
  }
 }

@@ -1,10 +1,13 @@
 package it.tgfm.core
 
-enum class AttachmentView(val label: String) {
- SELECTED("Mostra solo selezionati"),
- SELECTED_AND_SIMILAR("Mostra selezionati e Affini"),
- ALL("Mostra tutti i file");
+import it.tgfm.R
+import it.tgfm.Words
 
+enum class AttachmentView(private val labelId: Int) {
+ SELECTED(R.string.show_selected_only),
+ SELECTED_AND_SIMILAR(R.string.show_selected_and_similar_files),
+ ALL(R.string.show_all_files);
+ val label: String get() = Words.get(labelId)
  companion object {
   fun fromStored(value: String?, legacyShowAll: Boolean? = null): AttachmentView =
    entries.firstOrNull { it.name == value } ?: if (legacyShowAll == false) SELECTED_AND_SIMILAR else ALL

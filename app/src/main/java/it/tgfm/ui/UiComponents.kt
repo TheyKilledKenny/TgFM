@@ -1,5 +1,8 @@
 package it.tgfm.ui
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -62,7 +65,7 @@ import it.tgfm.core.Match
 @Composable internal fun ExpandableInfo(title: String, content: @Composable ColumnScope.() -> Unit) {
  var expanded by rememberSaveable { mutableStateOf(false) }
  Column(Modifier.fillMaxWidth()) {
-  TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth().semantics { stateDescription = if (expanded) "Espanso" else "Chiuso" }, contentPadding = PaddingValues(horizontal = 0.dp)) {
+  TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth().semantics { stateDescription = if (expanded) Words.get(R.string.expanded) else Words.get(R.string.closed) }, contentPadding = PaddingValues(horizontal = 0.dp)) {
    Text(title, modifier = Modifier.weight(1f)); Icon(if (expanded) UiIcons.Up else UiIcons.Down, null, Modifier.size(20.dp))
   }
   if (expanded) Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
@@ -78,7 +81,7 @@ import it.tgfm.core.Match
 }
 
 internal fun viewLabel(view: AttachmentView): String = when(view) {
- AttachmentView.SELECTED -> "Solo selezionati"
- AttachmentView.SELECTED_AND_SIMILAR -> "Selezionati e affini"
- AttachmentView.ALL -> "Tutti i file"
+ AttachmentView.SELECTED -> Words.get(R.string.selected_only)
+ AttachmentView.SELECTED_AND_SIMILAR -> Words.get(R.string.selected_and_similar)
+ AttachmentView.ALL -> Words.get(R.string.all_files)
 }

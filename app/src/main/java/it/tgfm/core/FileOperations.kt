@@ -1,5 +1,8 @@
 package it.tgfm.core
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -34,7 +37,7 @@ interface MoveDestination {
 /** A transfer is acknowledged only after close + read-back SHA-256 verification. */
 object VerifiedMove {
  fun move(source: File, mime: String, destination: MoveDestination, progress: (Long) -> Unit = {}): String {
-  require(source.isFile) { "File locale non disponibile." }
+  require(source.isFile) { Words.get(R.string.local_file_unavailable) }
   val name = FileNames.unique(source.name, destination::exists)
   val id = destination.create(name, mime.ifBlank { "application/octet-stream" })
   try {
@@ -54,12 +57,12 @@ object VerifiedMove {
     val buf = ByteArray(64 * 1024)
     while (true) { val n = input.read(buf); if (n < 0) break; actual.update(buf, 0, n); checked += n }
    }
-   check(bytes == checked && digest.digest().contentEquals(actual.digest())) { "Verifica del trasferimento fallita. L'originale è conservato." }
-   check(source.delete()) { "Impossibile eliminare l'originale." }
+   check(bytes == checked && digest.digest().contentEquals(actual.digest())) { Words.get(R.string.transfer_verification_failed_the_original_was_kept) }
+   check(source.delete()) { Words.get(R.string.could_not_delete_the_original) }
    return name
   } catch (e: Exception) {
    val cleaned = runCatching { destination.delete(id) }.getOrDefault(false)
-   if (!cleaned) throw java.io.IOException("Originale conservato; impossibile rimuovere la copia incompleta ($name) dalla destinazione. Rimuovila manualmente.", e)
+   if (!cleaned) throw java.io.IOException(Words.get(R.string.the_original_was_kept_remove_the_incomplete, name), e)
    throw e
   }
  }

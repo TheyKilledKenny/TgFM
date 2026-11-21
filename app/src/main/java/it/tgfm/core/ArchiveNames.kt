@@ -1,5 +1,8 @@
 package it.tgfm.core
 
+import it.tgfm.R
+import it.tgfm.Words
+
 /** Naming recognition only: actual format and completeness are verified by the decoder. */
 object ArchiveNames {
  data class Part(val name: String, val number: Int, val first: Int)
@@ -33,7 +36,7 @@ object ArchiveNames {
  fun members(file: Attachment) = file.parts.ifEmpty { listOf(file) }
  fun safeEntry(name: String): String {
   val path = name.replace('\\', '/')
-  require(path.isNotBlank() && !path.startsWith('/') && !Regex("^[A-Za-z]:").containsMatchIn(path) && path.split('/').none { it == ".." } && path.none { it == '\u0000' || it == '\r' || it == '\n' }) { "Percorso non valido nell'archivio: $name" }
+  require(path.isNotBlank() && !path.startsWith('/') && !Regex("^[A-Za-z]:").containsMatchIn(path) && path.split('/').none { it == ".." } && path.none { it == '\u0000' || it == '\r' || it == '\n' }) { Words.get(R.string.invalid_archive_path, name) }
   return path.split('/').filter { it.isNotEmpty() && it != "." }.joinToString("/").also { require(it.isNotEmpty()) }
  }
 }

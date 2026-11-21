@@ -1,9 +1,16 @@
 package it.tgfm.core
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import java.util.UUID
 
-enum class Category(val label: String) { DOCUMENT("Documento"), IMAGE("Immagine"), VIDEO("Video"), AUDIO("Audio"), STICKER("Sticker"), ANIMATION("Animazione"), OTHER("Altro") }
-enum class Match(val label: String) { CERTAIN("Certa"), POSSIBLE("Possibile"), NONE("Non corrispondente"), EXCLUDED("Escluso") }
+enum class Category(private val labelId: Int) { DOCUMENT(R.string.document), IMAGE(R.string.image), VIDEO(R.string.video), AUDIO(R.string.audio), STICKER(R.string.sticker), ANIMATION(R.string.animation), OTHER(R.string.other);
+ val label: String get() = Words.get(labelId)
+}
+enum class Match(private val labelId: Int) { CERTAIN(R.string.exact_match), POSSIBLE(R.string.possible_match), NONE(R.string.no_match), EXCLUDED(R.string.excluded);
+ val label: String get() = Words.get(labelId)
+}
 data class Attachment(val chatId: Long, val messageId: Long, val fileId: Int, val name: String, val mime: String = "", val size: Long = 0, val date: Long = 0, val caption: String = "", val category: Category = Category.DOCUMENT, val parts: List<Attachment> = emptyList(), val cover: CoverImage? = null) {
  val key: String get() = "$chatId:$messageId:$fileId"
  val extension: String get() = name.substringAfterLast('.', "").lowercase(java.util.Locale.ROOT)
