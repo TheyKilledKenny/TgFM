@@ -8,7 +8,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 enum class PostPeriodMode(private val labelId: Int) {
- TODAY(R.string.today), ALL(R.string.all_files), DAY(R.string.specific_day), RANGE(R.string.date_range);
+ TODAY(R.string.today), WEEK(R.string.last_week), ALL(R.string.all_files), DAY(R.string.specific_day), RANGE(R.string.date_range);
  val label: String get() = Words.get(labelId)
 }
 
@@ -27,6 +27,7 @@ data class PostPeriod(
   val format = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.SHORT).withLocale(Words.locale)
   return when (mode) {
    PostPeriodMode.TODAY -> Words.get(R.string.today_detail, today.format(format))
+   PostPeriodMode.WEEK -> Words.get(R.string.last_week)
    PostPeriodMode.ALL -> Words.get(R.string.all_files)
    PostPeriodMode.DAY -> first.format(format)
    PostPeriodMode.RANGE -> "${first.format(format)} – ${last.format(format)}"
@@ -34,8 +35,12 @@ data class PostPeriod(
  }
  fun window(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): PostWindow {
   if (mode == PostPeriodMode.ALL) return PostWindow()
-  val from = if (mode == PostPeriodMode.TODAY) today else first
-  val through = if (mode == PostPeriodMode.RANGE) last else from
+  val from = when (mode) {
+   PostPeriodMode.TODAY -> today
+   PostPeriodMode.WEEK -> today.minusDays(6)
+   else -> first
+  }
+  val through = if (mode == PostPeriodMode.RANGE) last else if (mode == PostPeriodMode.WEEK) today else from
   require(!through.isBefore(from)) { Words.get(R.string.the_end_date_must_be_on_or) }
   val start = from.atStartOfDay(zone).toEpochSecond()
   val end = through.plusDays(1).atStartOfDay(zone).toEpochSecond()

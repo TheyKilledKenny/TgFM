@@ -40,6 +40,14 @@ data class UiState(
  val shareFiles: List<Downloaded> = emptyList(), val ready: Boolean = false
 ) {
  val activeRules: List<Rule> get() = if (channel == null) emptyList() else rules.filter { it.channelId == channel.id }
+ fun archiveChoiceFor(files: List<Downloaded>): Boolean {
+  val profiles = favorites.associateBy { it.id }
+  val choices = files.filter { ArchiveNames.isArchive(it.originalName) }.map { file ->
+   val chatId = file.sourceKey.substringBefore(':').toLongOrNull()
+   profiles[chatId]?.profile?.useArchiveContents(archiveDefault) ?: archiveDefault
+  }
+  return choices.distinct().singleOrNull() ?: archiveDefault
+ }
  fun withFiles(files: List<Attachment>, covers: Boolean, applyFilters: Boolean): UiState {
   val usedPhotos = if (covers) files.mapNotNull { file ->
    file.cover?.messageId?.let { file.chatId to it }
@@ -54,14 +62,16 @@ data class UiState(
  }
  fun withConfiguration(config: ChannelConfiguration): UiState {
   val changedChannel = channel?.id != config.channel?.id
+  val profile = config.channel?.profile ?: ChannelProfile()
   val base = copy(favorites = config.favorites, channel = config.channel, rules = config.rules,
+   postPeriod = if (changedChannel || profile.initialPeriod != channel?.profile?.initialPeriod) PostPeriod(profile.initialPeriod) else postPeriod,
    allAttachments = if (changedChannel) emptyList() else allAttachments,
    attachments = if (changedChannel) emptyList() else attachments,
    selected = if (changedChannel) emptySet() else selected,
    scannedPeriod = if (changedChannel) null else scannedPeriod, scanComplete = if (changedChannel) false else scanComplete)
-  return if (!changedChannel && activeRules != base.activeRules) base.copy(selected = base.attachments.filter {
-   FilterEngine.classify(it, base.activeRules) == Match.CERTAIN
-  }.map { it.key }.toSet()) else base
+  val rulesChanged = activeRules != base.activeRules
+  return if (changedChannel || rulesChanged || showCovers != profile.covers)
+   base.withFiles(base.allAttachments, profile.covers, applyFilters = rulesChanged) else base
  }
 }
 class AppViewModel(application: Application): AndroidViewModel(application) {
@@ -74,9 +84,9 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  private var operation: Job? = null
  @Volatile private var foregroundRecheckPending = false
  private val coverSlots = kotlinx.coroutines.sync.Semaphore(2)
- fun showCovers(value: Boolean) { viewModelScope.launch {
-  try { app.preferences.saveShowCovers(value) } catch(e: Exception) { notify(Words.get(R.string.could_not_save_cover_preference, e.message)) }
- } }
+ fun saveProfile(id: Long, profile: ChannelProfile) = launchOperation(Words.get(R.string.saving_channel)) {
+  applyConfiguration(app.preferences.saveProfile(id, profile))
+ }
  suspend fun coverFile(id: Int): File? {
   coverSlots.acquire()
   try { return if(_state.value.showCovers && _state.value.auth == "authorizationStateReady") tg.cover(id) else null }
@@ -89,7 +99,6 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  fun archiveMode(contents: Boolean) { _state.update { it.copy(archiveContents = contents) } }
  fun archiveDefault(contents: Boolean) { viewModelScope.launch { app.preferences.saveArchiveContents(contents) } }
  init {
-  viewModelScope.launch { app.preferences.showCovers.collect { value -> _state.update { it.withFiles(it.allAttachments, value, applyFilters = false) } } }
   viewModelScope.launch { app.preferences.archiveContents.collect { value -> _state.update { it.copy(archiveContents = value, archiveDefault = value) } } }
   viewModelScope.launch { app.preferences.configuration.catch { notify(Words.get(R.string.could_not_read_channels_and_filters, it.message)) }.collect { config ->
    applyConfiguration(config)

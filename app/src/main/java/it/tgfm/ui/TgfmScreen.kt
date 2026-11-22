@@ -57,6 +57,7 @@ import java.time.format.DateTimeFormatter
  var permissionPromptHandled by rememberSaveable { mutableStateOf(false) }
  var selectedChannelMenu by remember { mutableStateOf(false) }
  var selectionQuery by rememberSaveable(s.channel?.id) { mutableStateOf("") }
+ var profileId by rememberSaveable { mutableStateOf<Long?>(null) }
  var removeFavoriteId by rememberSaveable { mutableStateOf<Long?>(null) }
  var viewMenuExpanded by remember { mutableStateOf(false) }
  val selectionFiles = remember(s.attachments, s.selected, s.activeRules, s.attachmentView, selectionQuery) {
@@ -67,7 +68,11 @@ import java.time.format.DateTimeFormatter
  var deleteFiles by remember { mutableStateOf<List<Downloaded>?>(null) }
  var editFtp by remember { mutableStateOf(false) }
  var confirmAction by rememberSaveable { mutableStateOf("") }
- LaunchedEffect(confirmAction) { if(confirmAction.isNotEmpty()) archiveContents = s.archiveDefault }
+ fun confirmTransfer(action: String, local: Boolean) {
+  archiveContents = if (local) s.archiveChoiceFor(vm.selectedDownloads())
+   else s.channel?.profile?.useArchiveContents(s.archiveDefault) ?: s.archiveDefault
+  confirmAction = action
+ }
 
  var desiredKeys by rememberSaveable { mutableStateOf<List<String>>(arrayListOf()) }
  var unwantedKeys by rememberSaveable { mutableStateOf<List<String>>(arrayListOf()) }
@@ -100,7 +105,7 @@ import java.time.format.DateTimeFormatter
   s.tab == AppTab.SETTINGS.ordinal -> when(settingsPage) { "account" -> "Telegram"; "favorites" -> Words.get(R.string.favorite_channels); "storage" -> Words.get(R.string.files_and_folder); else -> Words.get(R.string.settings) }
   else -> AppTab.entries[s.tab].label
  }
- val openFtp: (Boolean) -> Unit = { local -> ftpPath = ""; ftpKeep = s.ftp.keep; confirmAction = if (local) "ftp-downloads" else "ftp-selection" }
+ val openFtp: (Boolean) -> Unit = { local -> ftpPath = ""; ftpKeep = s.ftp.keep; confirmTransfer(if (local) "ftp-downloads" else "ftp-selection", local) }
  MaterialTheme(typography = Typography(
   titleLarge = androidx.compose.ui.text.TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
   titleMedium = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
@@ -119,11 +124,11 @@ import java.time.format.DateTimeFormatter
     if (editJson == null && !editFtp) when (s.tab) {
      AppTab.SELECTION.ordinal -> CommandBar(Words.get(R.string.selected, s.selected.size, sizeLabel(s.attachments.filter { it.key in s.selected }.sumOf { it.size }))) {
       CommandButton(Words.get(R.string.save), !s.busy && s.selected.isNotEmpty(), Modifier.weight(.8f)) { confirmAction = "download" }
-      CommandButton(Words.get(R.string.share), !s.busy && s.selected.isNotEmpty(), Modifier.weight(1f)) { confirmAction = "share" }
+      CommandButton(Words.get(R.string.share), !s.busy && s.selected.isNotEmpty(), Modifier.weight(1f)) { confirmTransfer("share", false) }
       CommandButton(Words.get(R.string.save_to_ftp), !s.busy && s.selected.isNotEmpty(), Modifier.weight(1.25f)) { openFtp(false) }
      }
      AppTab.DOWNLOADS.ordinal -> CommandBar(Words.get(R.string.selected, s.downloadedSelection.size, sizeLabel(s.downloads.filter { it.path in s.downloadedSelection }.sumOf { it.size }))) {
-      CommandButton(Words.get(R.string.share), !s.busy && s.downloadedSelection.isNotEmpty(), Modifier.weight(1f)) { confirmAction = "share-local" }
+      CommandButton(Words.get(R.string.share), !s.busy && s.downloadedSelection.isNotEmpty(), Modifier.weight(1f)) { confirmTransfer("share-local", true) }
       CommandButton(Words.get(R.string.save_to_ftp), !s.busy && s.downloadedSelection.isNotEmpty(), Modifier.weight(1.15f)) { openFtp(true) }
       IconButton(onClick = { deleteFiles = vm.selectedDownloads() }, enabled = !s.busy && s.downloadedSelection.isNotEmpty()) { Icon(UiIcons.Delete, Words.get(R.string.delete_selected), tint = if (!s.busy && s.downloadedSelection.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f)) }
      }
@@ -206,13 +211,6 @@ import java.time.format.DateTimeFormatter
          Text(Words.get(R.string.share_and_send_archive_contents), Modifier.weight(1f))
         }
         Text(Words.get(R.string.you_can_change_this_choice_before_sending), style = MaterialTheme.typography.bodySmall)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-         Switch(s.showCovers, vm::showCovers, enabled = !s.busy)
-         Column(Modifier.weight(1f)) {
-          Text(Words.get(R.string.use_previous_photos_as_covers))
-          Text(Words.get(R.string.selection_shows_the_photo_immediately_before_a), style = MaterialTheme.typography.bodySmall)
-         }
-        }
         TextButton(onClick = { confirmAction = "cache" }, enabled = !s.busy && s.fileAccess) { Text(Words.get(R.string.clear_temporary_cache)) }
        } }
         }
@@ -275,6 +273,9 @@ import java.time.format.DateTimeFormatter
             Text(channel.title, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
            }
            if (s.channel?.id == channel.id) Text(Words.get(R.string.active), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+           if (favorite) IconButton(onClick = { profileId = channel.id }, enabled = !s.busy) {
+            Icon(UiIcons.Settings, Words.get(R.string.channel_options_for, channel.title))
+           }
           }
          }
         }
@@ -511,6 +512,12 @@ import java.time.format.DateTimeFormatter
    text = { Text(if (android.os.Build.VERSION.SDK_INT >= 30) Words.get(R.string.open_android_special_app_access_and_enable) else Words.get(R.string.allow_file_access_in_android_then_return)) },
    confirmButton = { TextButton(onClick = { permissionPromptHandled = true; onStorageAccess() }) { Text(Words.get(R.string.grant_access)) } },
    dismissButton = { TextButton(onClick = { permissionPromptHandled = true }) { Text(Words.get(R.string.not_now)) } })
+  s.favorites.firstOrNull { it.id == profileId }?.let { favorite ->
+   ChannelProfileDialog(favorite, onDismiss = { profileId = null }, onSave = { profile ->
+    profileId = null
+    vm.saveProfile(favorite.id, profile)
+   })
+  }
   removeFavoriteId?.let { id ->
    val favorite = s.favorites.firstOrNull { it.id == id }
    val count = s.rules.count { it.channelId == id }
@@ -562,7 +569,7 @@ import java.time.format.DateTimeFormatter
     Text(Words.get(R.string.this_choice_applies_only_to_this_upload), style = MaterialTheme.typography.bodySmall)
    }
   } }, confirmButton = { TextButton(onClick = {
-   vm.archiveMode(archiveContents)
+   if (confirmAction in setOf("share", "share-local", "ftp-selection", "ftp-downloads")) vm.archiveMode(archiveContents)
    when(confirmAction) { "share-local" -> onShare(null); "download" -> onDownload(false); "share" -> onSelectionShare(); "ftp-selection" -> onFtp(false, ftpKeep, ftpPath); "ftp-downloads" -> onFtp(true, ftpKeep, ftpPath); "cache" -> vm.clearCache(); "logout" -> vm.logout(); "delete" -> confirmJson?.let { vm.deleteRule(RuleJson.decode(JSONObject(it))) }; "rule" -> confirmJson?.let { vm.saveRule(RuleJson.decode(JSONObject(it))) } }
    confirmAction = ""
   }, enabled = !s.busy) { Text(Words.get(R.string.confirm)) } }, dismissButton = { TextButton(onClick = { confirmAction = "" }) { Text(Words.get(R.string.cancel)) } })
@@ -702,5 +709,45 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
   }
    TextButton(onClick = onTest, enabled = enabled && settings.host.isNotBlank() && draft == settings) { Text(Words.get(R.string.check_access)) }
    if (draft != settings) Text(Words.get(R.string.save_changes_before_checking_access), style = MaterialTheme.typography.bodySmall)
+ }
+}
+
+@Composable private fun ChannelProfileDialog(channel: Channel, onDismiss: () -> Unit, onSave: (ChannelProfile) -> Unit) {
+ var covers by rememberSaveable(channel.id) { mutableStateOf(channel.profile.covers) }
+ var period by rememberSaveable(channel.id) { mutableStateOf(channel.profile.initialPeriod) }
+ var contents by rememberSaveable(channel.id) { mutableStateOf(channel.profile.archiveContents) }
+ AlertDialog(onDismissRequest = onDismiss, title = { Text(channel.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+  text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+   Row(Modifier.fillMaxWidth().toggleable(value = covers, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = { covers = it }),
+    verticalAlignment = Alignment.CenterVertically) {
+    Text(Words.get(R.string.channel_covers), Modifier.weight(1f))
+    Switch(covers, onCheckedChange = null)
+   }
+   ProfileChoice(Words.get(R.string.initial_period), period.label) { close ->
+    listOf(PostPeriodMode.TODAY, PostPeriodMode.WEEK, PostPeriodMode.ALL).forEach { option ->
+     DropdownMenuItem(text = { Text(option.label) }, onClick = { period = option; close() })
+    }
+   }
+   val archiveChoices = listOf(null to R.string.general_setting, false to R.string.original_archive, true to R.string.archive_files)
+   ProfileChoice(Words.get(R.string.channel_archives), Words.get(archiveChoices.first { it.first == contents }.second)) { close ->
+    archiveChoices.forEach { (value, label) ->
+     DropdownMenuItem(text = { Text(Words.get(label)) }, onClick = { contents = value; close() })
+    }
+   }
+  } },
+  confirmButton = { TextButton(onClick = { onSave(ChannelProfile(covers, period, contents)) }) { Text(Words.get(R.string.save)) } },
+  dismissButton = { TextButton(onClick = onDismiss) { Text(Words.get(R.string.cancel)) } })
+}
+
+@Composable private fun ProfileChoice(label: String, value: String, options: @Composable (() -> Unit) -> Unit) {
+ var expanded by remember { mutableStateOf(false) }
+ Column {
+  Text(label, style = MaterialTheme.typography.labelMedium)
+  Box {
+   OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+    Text(value, Modifier.weight(1f)); Icon(UiIcons.Down, null)
+   }
+   DropdownMenu(expanded, onDismissRequest = { expanded = false }) { options { expanded = false } }
+  }
  }
 }

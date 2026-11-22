@@ -21,11 +21,8 @@ object RuleJson {
 }
 fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else (0 until length()).map { getString(it) }
 class Preferences(context: Context, private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> = context.store) {
- private val coversKey = booleanPreferencesKey("show_previous_photo_covers")
- val showCovers = dataStore.data.map { it[coversKey] ?: false }.distinctUntilChanged()
- suspend fun saveShowCovers(value: Boolean) { dataStore.edit { it[coversKey] = value } }
  private val archiveKey = booleanPreferencesKey("archive_contents")
- val archiveContents = dataStore.data.map { it[archiveKey] ?: false }
+ val archiveContents = dataStore.data.map { it[archiveKey] ?: false }.distinctUntilChanged()
  suspend fun saveArchiveContents(value: Boolean) { dataStore.edit { it[archiveKey] = value } }
  private val rulesKey = stringPreferencesKey("rules")
  private val channelKey = stringPreferencesKey("channel")
@@ -44,7 +41,7 @@ class Preferences(context: Context, private val dataStore: androidx.datastore.co
   val active = prefs[channelKey]?.let { JSONObject(it) }?.let { Channel(it.getLong("id"), it.getString("title")) }
   val favoritesJson = prefs[favoritesKey]
   val favorites = favoritesJson?.let { raw -> JSONArray(raw).let { array ->
-   (0 until array.length()).map { array.getJSONObject(it).let { Channel(it.getLong("id"), it.getString("title")) } }
+   (0 until array.length()).map { decodeFavorite(array.getJSONObject(it)) }
   } } ?: listOfNotNull(active)
   val rules = JSONArray(prefs[rulesKey] ?: "[]").let { array -> (0 until array.length()).map {
    val rule = RuleJson.decode(array.getJSONObject(it))
@@ -52,11 +49,23 @@ class Preferences(context: Context, private val dataStore: androidx.datastore.co
   } }
   return ChannelConfiguration(favorites.distinctBy { it.id }, favorites.firstOrNull { it.id == active?.id }, rules)
  }
+ private fun decodeFavorite(json: JSONObject): Channel {
+  val period = listOf(PostPeriodMode.TODAY, PostPeriodMode.WEEK, PostPeriodMode.ALL)
+   .firstOrNull { it.name == json.optString("initial_period") } ?: PostPeriodMode.TODAY
+  val archive = if (json.isNull("archive_contents")) null else json.getBoolean("archive_contents")
+  return Channel(json.getLong("id"), json.getString("title"), ChannelProfile(json.optBoolean("covers"), period, archive))
+ }
+ private fun favoriteJson(channel: Channel) = channelJson(channel)
+  .put("covers", channel.profile.covers).put("initial_period", channel.profile.initialPeriod.name)
+  .put("archive_contents", channel.profile.archiveContents)
+ suspend fun saveProfile(id: Long, profile: ChannelProfile) = editConfiguration { config ->
+  config.copy(favorites = config.favorites.map { if (it.id == id) it.copy(profile = profile) else it })
+ }
  private fun channelJson(channel: Channel) = JSONObject().put("id", channel.id).put("title", channel.title)
  private suspend fun editConfiguration(change: (ChannelConfiguration) -> ChannelConfiguration): ChannelConfiguration {
   val saved = dataStore.edit { prefs ->
    val config = change(decode(prefs))
-   prefs[favoritesKey] = JSONArray(config.favorites.map(::channelJson)).toString()
+   prefs[favoritesKey] = JSONArray(config.favorites.map(::favoriteJson)).toString()
    if (config.channel == null) prefs.remove(channelKey) else prefs[channelKey] = channelJson(config.channel).toString()
    prefs[rulesKey] = JSONArray(config.rules.map(RuleJson::encode)).toString()
   }
@@ -87,6 +96,6 @@ class Preferences(context: Context, private val dataStore: androidx.datastore.co
  }
  suspend fun updateFavoriteTitles(channels: List<Channel>) = editConfiguration { config ->
   val byId = channels.associateBy { it.id }
-  config.copy(favorites = config.favorites.map { byId[it.id] ?: it }, channel = config.channel?.let { byId[it.id] ?: it })
+  config.copy(favorites = config.favorites.map { favorite -> byId[favorite.id]?.let { favorite.copy(title = it.title) } ?: favorite }, channel = config.channel?.let { byId[it.id] ?: it })
  }
 }

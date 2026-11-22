@@ -18,7 +18,7 @@ Android 8.0 o successivo · ARM64 · Distribuzione tramite [GitHub Releases](htt
 
 La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contiene `TgFM-1.5.4.apk` e il checksum SHA-256 nella sezione **Assets**.
 
-**Build di sviluppo** · [Scarica l’APK di test 1.5.7](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.7-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.7-debug.apk.sha256)
+**Build di sviluppo** · [Scarica l’APK di test 1.5.8](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256)
 
 ## Indice
 
@@ -125,7 +125,7 @@ I risultati vengono pubblicati a ogni pagina ricevuta e vengono applicate le reg
 
 In **Filtri**, toccare l’intestazione di un canale per comprimere o espandere le sue regole. Restano visibili il totale e il numero di regole attive. **Comprimi tutti / Espandi tutti** agisce su tutti i gruppi; comprimere un gruppo non disattiva i filtri. Lo stato aperto/chiuso resta al cambio sezione e alla ricreazione della schermata.
 
-Attivare **Configura → File e cartella → Copertine dai messaggi precedenti** per mostrare copertine compatte in Selezione (opzione inizialmente spenta). Una foto nel messaggio immediatamente precedente viene associata al documento, file audio o video successivo. Per un archivio multipart vale la foto prima della prima parte pubblicata. Un messaggio intermedio interrompe l’associazione; anteprime dei link e sticker non sono utilizzati.
+In **Configura → Canali preferiti**, apri le impostazioni accanto al preferito e attiva **Foto di copertina**. Una foto nel messaggio immediatamente precedente viene associata al documento, file audio o video successivo. Per un archivio multipart vale la foto prima della prima parte pubblicata. Un messaggio intermedio interrompe l’associazione; anteprime dei link e sticker non sono utilizzati.
 
 Tocca la colonna sinistra per selezionare il file. Sulla copertina compare la spunta. I file senza copertina hanno una checkbox standard nella stessa colonna. Tocca il resto della tessera per aprire l’anteprima con le didascalie. In modalità copertina le foto usate come copertine vengono nascoste ed escluse dalla selezione automatica e da Seleziona tutti. Disattivando la modalità ricompaiono subito.
 
@@ -421,6 +421,10 @@ Per ricompilare la componente nativa o aggiungere altre ABI, seguire le [istruzi
 I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un progetto indipendente.
 
 ## Note di rilascio
+
+### 1.5.8 - Impostazioni dei preferiti
+
+Le copertine partono spente per ogni preferito, anche dopo l’aggiornamento. Per il periodo iniziale puoi scegliere Oggi, Ultimi 7 giorni o Tutti i file. Puoi ancora cambiare il periodo per una lettura in Selezione. Per gli archivi puoi seguire la scelta generale oppure scegliere l’originale o il contenuto. In Download, se gli archivi selezionati hanno preferenze diverse, si usa la scelta generale.
 
 ### 1.5.7 - Lingua dell’app
 

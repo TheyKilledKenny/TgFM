@@ -18,7 +18,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 
 [Release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contains `TgFM-1.5.4.apk` and its SHA-256 checksum in the **Assets** section.
 
-**Development build** · [Download the 1.5.7 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.7-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.7-debug.apk.sha256)
+**Development build** · [Download the 1.5.8 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256)
 
 ## Contents
 
@@ -125,7 +125,7 @@ Results are published as each page arrives and the active channel's rules are ap
 
 In **Filtri**, tap a channel heading to collapse or expand its rules. The rule count and enabled count remain visible. **Comprimi tutti / Espandi tutti** controls all groups; collapsing a group does not disable its filters. The open/closed state survives screen changes and activity recreation.
 
-Enable **Configura → File e cartella → Copertine dai messaggi precedenti** to show compact covers in Selezione (off by default). A photo in the immediately preceding message is associated with the next document, audio or video file. For a multipart archive, the photo preceding its first published part is used. An intervening text or other message breaks the association; web previews and stickers are not used.
+In **Settings → Favorite channels**, open the settings icon beside a favorite and enable **Photo covers**. A photo in the immediately preceding message is associated with the next document, audio or video file. For a multipart archive, the photo preceding its first published part is used. An intervening text or other message breaks the association; web previews and stickers are not used.
 
 Tap the left column to select the file. Its cover shows the selection indicator. Files without covers use a standard checkbox in the same column. Tap the rest of the row for the preview and captions. In cover mode, photos used as covers are hidden from the list and excluded from automatic selection and Select all. Switching cover mode off shows them again immediately.
 
@@ -421,6 +421,10 @@ To rebuild the native component or add other ABIs, follow the [upstream Android 
 The names Telegram and WhatsApp identify third-party services. TgFM is an independent project.
 
 ## Release notes
+
+### 1.5.8 - Favorite channel settings
+
+Covers start off for every favorite, including after updating. Choose Today, Last 7 days or All files as the initial reading period. You can still change the period for a scan in Selection. For archives, use the general setting or choose the original or its contents. Downloads uses the general setting when selected archives have conflicting defaults.
 
 ### 1.5.7 - App language
 

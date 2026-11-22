@@ -456,4 +456,12 @@
     <string name="sticker">"Sticker"</string>
     <string name="app_language">"App language"</string>
     <string name="system_language">"System default"</string>
+    <string name="last_week">Last 7 days</string>
+    <string name="channel_options_for">Settings for %1$s</string>
+    <string name="channel_covers">Photo covers</string>
+    <string name="initial_period">Default period</string>
+    <string name="channel_archives">Archive sharing</string>
+    <string name="general_setting">Use general setting</string>
+    <string name="original_archive">Original archive</string>
+    <string name="archive_files">Archive contents</string>
 </resources>

@@ -456,4 +456,12 @@
     <string name="sticker">"Sticker"</string>
     <string name="app_language">"Lingua dell’app"</string>
     <string name="system_language">"Lingua di sistema"</string>
+    <string name="last_week">Ultimi 7 giorni</string>
+    <string name="channel_options_for">Impostazioni di %1$s</string>
+    <string name="channel_covers">Foto di copertina</string>
+    <string name="initial_period">Periodo iniziale</string>
+    <string name="channel_archives">Invio archivi</string>
+    <string name="general_setting">Usa scelta generale</string>
+    <string name="original_archive">Archivio originale</string>
+    <string name="archive_files">Contenuto archivio</string>
 </resources>
