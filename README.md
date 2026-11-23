@@ -10,15 +10,11 @@ Vibe Coding! Codex developed this code under the supervision of TheyKilledKenny.
 
 TgFM is a native Android app for browsing attachments in your Telegram channels and groups, selecting them using configurable rules, saving them to a folder of your choice, sharing them, or sending them to an FTP/FTPS server.
 
-The app uses your personal Telegram account through **TDLib** and runs independently on your phone, without a computer or application server. In the development build, TgFM follows your Android language preferences, supports English and Italian, and falls back to English. To override the system choice, open **Settings → App language** and select **English** or **Italiano**. Choose **System default** to follow Android again.
+The app uses your personal Telegram account through **TDLib** and runs independently on your phone, without a computer or application server. TgFM follows your Android language preferences, supports English and Italian, and falls back to English. To override the system choice, open **Settings → App language** and select **English** or **Italiano**. Choose **System default** to follow Android again.
 
-**[Download TgFM 1.5.4 for Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk.sha256) · [Installation](#installation-and-first-sign-in)
+**[Download TgFM 1.5.8 for Android (test APK)](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk)** · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256) · [Installation](#installation-and-first-sign-in)
 
-Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases), without an app store.
-
-[Release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contains `TgFM-1.5.4.apk` and its SHA-256 checksum in the **Assets** section.
-
-**Development build** · [Download the 1.5.8 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256)
+Android 8.0 or later · ARM64
 
 ## Contents
 
@@ -36,8 +32,8 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 - [Architecture](#architecture)
 - [TDLib integration](#tdlib-integration)
 - [Third-party licenses](#third-party-licenses)
-- [Filter groups and covers](#compact-filter-groups-and-covers-155-development)
-- [Archive contents (1.5.4)](#archive-contents)
+- [Filter groups and covers](#compact-filter-groups-and-covers)
+- [Archive contents](#archive-contents)
 - [Release notes](#release-notes)
 
 ## Features
@@ -46,7 +42,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 - Local session storage and voluntary sign-out.
 - Selection of multiple favorite channels and groups, including private or archived ones, with search by name and quick switching of the active channel, without a total limit of 100 items.
 - Paginated reading of attachment metadata without downloading the contents first; partial results remain available after cancellation.
-- Post period to read: **Oggi** (Today, the default), **Tutti i file** (All files), **Un giorno preciso** (A specific day), or **Intervallo di date** (Date range), applied during reading.
+- Read posts from today, the last 7 days, a specific day, a date range or the entire channel. Each favorite can have its own default period.
 - Recognition of downloadable documents, images, videos, audio, animations, and stickers.
 - Persistent rules assigned to a favorite channel, for names, variable dates, extensions, MIME types, and Telegram categories.
 - Suggestions for common rules from multiple desired and undesired examples, with preview and confirmation.
@@ -56,7 +52,7 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 - Sharing through Android Sharesheet, including to WhatsApp.
 - Configurable external working folder (default `Download/TgFM`), with a separate TDLib cache inside it.
 - FTP/FTPS upload even while Telegram is still downloading, without a second complete copy.
-- **Conserva al termine** (Keep when finished) option, individual or multiple deletion, and explicit cache cleanup.
+- **Keep after upload** option, individual or multiple deletion, and explicit cache cleanup.
 
 ## Requirements
 
@@ -73,10 +69,10 @@ The project includes only the ARM64 native library. For an x86/x86_64 emulator o
 
 ## Installation and first sign-in
 
-1. Download `TgFM-1.5.4.apk` from the **Assets** in [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) using the phone's browser. Open the `.apk` file from your downloads and choose **Install**. If Android asks, allow **Install unknown apps** for the browser or file manager you used. A computer, ADB, and USB debugging are not needed. To update an installed copy with the same signature, open the new APK without uninstalling the app or deleting its data.
-2. Open **Configura** (Configure), grant file access, and choose the folder under **File e cartella** (File and folder; default `Download/TgFM`). Under **Telegram**, enter your **API ID** and **API hash**, obtained from [my.telegram.org](https://my.telegram.org) under *API development tools*. These are Telegram app credentials, not a Bot API token. You do not need to rebuild the APK.
-3. Tap **Configura accesso** (Set up access), then enter your number with its international prefix, the received code, and your two-step verification password if required. The app also handles email steps requested by TDLib. Configura accesso starts a new session, deleting the previous Telegram database; you do not need to tap it on every launch after a successful login.
-4. Under **Configura → Canali preferiti** (Configure → Favorite channels), tap **Aggiorna elenco canali e gruppi** (Refresh channel and group list), search by name, and check the ones to add to favorites. For an invite-only channel, first join it using the official Telegram app.
+1. Download the 1.5.8 test APK using the link at the top of this page in your phone’s browser. Open the `.apk` file from your downloads and choose **Install**. If Android asks, allow **Install unknown apps** for the browser or file manager you used. A computer, ADB, and USB debugging are not needed. To update an installed copy with the same signature, open the new APK without uninstalling the app or deleting its data.
+2. Open **Settings**, grant file access, and choose the folder under **Files and folder**. Under **Telegram**, enter your **API ID** and **API hash**, obtained from [my.telegram.org](https://my.telegram.org) under *API development tools*. These are Telegram app credentials, not a Bot API token. You do not need to rebuild the APK.
+3. Tap **Set up access**, then enter your number with its international prefix, the received code, and your two-step verification password if required. The app also handles email steps requested by TDLib. Set up access starts a new session, deleting the previous Telegram database; you do not need to tap it on every launch after a successful login.
+4. Under **Settings → Favorite channels**, tap **Refresh channels and groups**, search by name, and check the ones to add to favorites. For an invite-only channel, first join it using the official Telegram app.
 
 On Android 11 or later, access to the external folder requires **All files access**, available under special access in Android settings. On Android 8–10, storage permission is requested.
 
@@ -88,21 +84,21 @@ The menu follows this order:
 
 | Area | Main actions |
 |---|---|
-| **Selezione** (Selection) | Switch between favorite channels by tapping the name, read and search attachments, and choose Save, Share, or Save to FTP |
-| **Download** | Monitor transfers, open completed files, select, share, send to FTP, or delete |
-| **Filtri** (Filters) | Assign rules to favorites, edit them using icon actions, and configure them from searchable examples |
-| **Configura** (Configure) | Manage sign-in, favorite channels, working folder, cache, FTP, and download policy |
+| **Selection** | Switch between favorite channels by tapping the name, read and search attachments, and choose Save, Share, or Save to FTP |
+| **Downloads** | Monitor transfers, open completed files, select, share, send to FTP, or delete |
+| **Filters** | Assign rules to favorites, edit them using icon actions, and configure them from searchable examples |
+| **Settings** | Manage sign-in, favorite channels, working folder, cache, FTP, and download policy |
 
-On startup, the app opens Selezione when the session and favorite channel are ready; otherwise it opens Configura. A temporary Telegram reconnection, including after returning from the background, does not block Selezione: previously read metadata can be viewed while the connection is restored. An invalid session or lack of an active channel requires Configura. Download and Filtri remain manually accessible for local functions.
+On startup, the app opens Selection when the session and favorite channel are ready; otherwise it opens Settings. A temporary Telegram reconnection, including after returning from the background, does not block Selection: previously read metadata can be viewed while the connection is restored. An invalid session or lack of an active channel requires Settings. Downloads and Filters remain manually accessible for local functions.
 
 Typical workflow:
 
-1. In Selezione, tap the channel name to choose one of your favorites, choose **Post** (default **Oggi**, Today), then tap **Leggi** (Read). Filename search works with the current view without losing the checkbox selections of hidden files.
-2. Check the results, choosing **Mostra → Solo selezionati** (Show → Selected only), **Selezionati e affini** (Selected and similar), or **Tutti i file** (All files). Selected items are always at the top, including those selected manually; Affini indicates Possible matches. The chosen view is retained.
-3. Adjust the checkboxes and tap **Salva** (Save), **Condividi** (Share), or **Salva su FTP** (Save to FTP).
-4. Download shows the complete files in the working folder: they can be shared, sent to FTP, opened, or deleted.
+1. In **Selection**, tap the channel name or picture to choose a favorite. Check the period under **Post** and tap **Read**. Searching by filename preserves the selection of hidden files.
+2. Check the results, choosing **Show → Selected only**, **Selected and similar**, or **All files**. Selected items are always at the top, including those selected manually. Similar files are possible matches. The chosen view is retained.
+3. Adjust the checkboxes and tap **Save**, **Share**, or **Save to FTP**.
+4. Downloads shows the complete files in the working folder: they can be shared, sent to FTP, opened, or deleted.
 
-**Seleziona tutti** (Select all) and **Deseleziona tutti** (Deselect all) affect all attachments read from the channel, even when search and the view hide some of them. In Download they affect the entire local list. The Save, Share, and Save to FTP buttons use the entire selection, not just the visible rows.
+**Select all** and **Deselect all** affect all selectable attachments read from the channel, even when search and the view hide some of them. In Downloads they affect the entire local list. The Save, Share, and Save to FTP buttons use the entire selection, not just the visible rows.
 
 ### Post date range and cancelling a read
 
@@ -110,36 +106,37 @@ The **Post** selector concerns the Telegram message date, independently of any d
 
 | Option | Posts read |
 |---|---|
-| **Oggi** (Today) | From the first instant of the current day to the following midnight |
-| **Tutti i file** (All files) | Entire accessible history |
-| **Un giorno preciso** (A specific day) | All posts on the date chosen in the calendar |
-| **Intervallo di date** (Date range) | From midnight at the start to the end of the last chosen day, including both days |
+| **Today** | From the first instant of the current day to the following midnight |
+| **Last 7 days** | Today and the six preceding days |
+| **All files** | Entire accessible history |
+| **Specific day** | All posts on the date chosen in the calendar |
+| **Date range** | From midnight at the start to the end of the last chosen day, including both days |
 
-The phone's time zone is used, including daylight saving time changes. Today is recalculated when Read is pressed. The chosen period remains for the app session; a new session starts with Today. Changing it does not alter attachments already displayed: press Read again to read the new period. The calendar allows dates from 1970 to 2037, compatible with TDLib timestamps; a reversed range disables reading and shows an error.
+The phone's time zone is used, including daylight saving time changes. Today is recalculated when Read is pressed. Opening a channel applies the default period from its profile. Changing it does not alter attachments already displayed: press Read again to read the new period. The calendar allows dates from 1970 to 2037, compatible with TDLib timestamps; a reversed range disables reading and shows an error.
 
-For bounded periods, TgFM uses `getChatMessageByDate` to reach the last post within the end date, then reads backwards and stops at the first post before the start date. It does not traverse the entire history and filter it afterwards. Reading concerns metadata only and does not start downloads.
+For bounded periods, TgFM uses `getChatMessageByDate` to reach the last post within the end date, then reads backwards and stops at the first post before the start date. It does not traverse the entire history and filter it afterwards. The scan reads attachment metadata. Visible photos may load small previews.
 
-Results are published as each page arrives and the active channel's rules are applied. **Annulla operazione** (Cancel operation) stops subsequent requests while retaining names, references, and automatic selections already collected: **Lettura parziale** (Partial read) distinguishes the result from a completed read. Results remain available for selection and download. A new read replaces the list; switching channels clears it. Metadata is kept in memory, without introducing persistent storage or data migrations.
+Results are published as each page arrives and the active channel's rules are applied. **Cancel operation** stops subsequent requests while retaining names, references, and automatic selections already collected: **Partial scan** distinguishes the result from a completed read. Results remain available for selection and download. A new read replaces the list; switching channels clears it. Scan results are held in memory.
 
-## Compact filter groups and covers (1.5.5 development)
+## Compact filter groups and covers
 
-In **Filtri**, tap a channel heading to collapse or expand its rules. The rule count and enabled count remain visible. **Comprimi tutti / Espandi tutti** controls all groups; collapsing a group does not disable its filters. The open/closed state survives screen changes and activity recreation.
+In **Filters**, tap a channel heading to collapse or expand its rules. The rule count and enabled count remain visible. **Collapse all / Expand all** controls all groups; collapsing a group does not disable its filters. The open/closed state survives screen changes and activity recreation.
 
 In **Settings → Favorite channels**, open the settings icon beside a favorite and enable **Photo covers**. A photo in the immediately preceding message is associated with the next document, audio or video file. For a multipart archive, the photo preceding its first published part is used. An intervening text or other message breaks the association; web previews and stickers are not used.
 
-Tap the left column to select the file. Its cover shows the selection indicator. Files without covers use a standard checkbox in the same column. Tap the rest of the row for the preview and captions. In cover mode, photos used as covers are hidden from the list and excluded from automatic selection and Select all. Switching cover mode off shows them again immediately.
+Tap the left column to select the file. Its cover shows the selection indicator. Files without covers use a standard checkbox in the same column. Tap the rest of the row for the preview and captions. In cover mode, photos used as covers are hidden from the list and excluded from automatic selection and Select all. Switching cover mode off shows them again immediately. Image details show the saved image or an available Telegram thumbnail, including for images posted as documents. This also works with photo covers turned off.
 
 ## Favorite channels and groups
 
 Refreshing enumerates all TDLib pages of the main and archived lists and includes channels, supergroups, and basic groups; private chats are excluded. The value 100 is the size of a loading page, not the maximum number of favorites or results. The complete list is sorted by name and duplicates are removed.
 
-Under **Configura → Canali preferiti**, checkboxes add or remove favorites. The active channel can be changed by tapping its name in Selezione. Switching channels clears the previous results, which must be read again with Leggi; only the filters assigned to the active channel apply.
+In **Settings → Favorite channels**, tap the channel picture to add or remove a favorite. A check mark identifies a favorite. Channels without a picture show their initial. In **Selection**, tap the name or picture to switch channels. Tap **Read** to load the new channel’s attachments with its filters.
 
 Each new or edited rule must be assigned to a favorite in the editor. Suggestions from examples are assigned to the channel from which the attachments were read. Identical rules on different channels remain separate.
 
-Removing a favorite also deletes the filters associated with that channel. If there are filters, a single confirmation shows their number; cancelling it changes nothing. With no associated filters, removal is immediate. Already downloaded files are not deleted. If the active channel is removed, the first remaining favorite is selected; if there are no favorites, Configura opens.
+Removing a favorite also deletes the filters associated with that channel. If there are filters, a single confirmation shows their number; cancelling it changes nothing. With no associated filters, removal is immediate. Already downloaded files are not deleted. If the active channel is removed, the first remaining favorite is selected; if there are no favorites, Settings opens.
 
-Compatibility with preferences from versions before multiple favorites remains: the previously selected channel becomes a favorite and receives the previous rules. Any rules without an old channel are kept as **Da assegnare** (To be assigned) and can be associated in the editor. This existing behavior concerns preferences, not Telegram session recovery.
+The settings icon beside each favorite opens its profile. **Photo covers** is off by default. Enable it to use the photo posted immediately before an attachment. **Default period** offers Today, Last 7 days or All files. Under **Archive sharing**, choose the general setting, the original archive or its contents. You can override this choice when confirming an individual transfer.
 
 ## Configuring filters
 
@@ -154,7 +151,7 @@ La_Gente_{data}
 Il_Pino_Verde_{data}
 ```
 
-With **Estensioni** (Extensions) empty, these rules allow PDF, EPUB, TXT, and other formats:
+With **Extensions** empty, these rules allow PDF, EPUB, TXT, and other formats:
 
 | Name | Automatically selected |
 |---|---|
@@ -166,7 +163,7 @@ With **Estensioni** (Extensions) empty, these rules allow PDF, EPUB, TXT, and ot
 | `Il_Pino_Verde_apostolico_14_Novembre_2026.pdf` | No |
 | `Estratto_Il_Pino_Verde.pdf` | No |
 
-In the **Radice esatta prima della data** (Exact root before the date) field, enter, for example, `La_Repubblica_`, including the trailing separator. The generated pattern will be `La_Repubblica_{data}`.
+In the **Exact prefix before date** field, enter, for example, `La_Repubblica_`, including the trailing separator. The generated pattern will be `La_Repubblica_{data}`.
 
 `{data}` recognizes, among others, `14Nov`, `14Nov2026`, `14_Novembre_2026`, `14 Novembre 2026`, `2026-11-14`, `14.11.2026`, and `20261114`. Recognition is syntactic: it does not check whether the day is valid in the calendar. It does not accept additional segments in place of the date.
 
@@ -178,7 +175,7 @@ In the **Radice esatta prima della data** (Exact root before the date) field, en
 | MIME | `application/pdf` or `image/*` | No MIME restriction |
 | Telegram category | Document, Image, Video, Audio, Sticker | No category restriction |
 
-The **Documento** (Document) category can include PDFs, EPUBs, and archives: it is not synonymous with PDF.
+The **Document** category can include PDFs, EPUBs, and archives: it is not synonymous with PDF.
 
 - Criteria filled in within the same rule are combined with **AND**.
 - Multiple inclusion rules are combined with **OR**.
@@ -186,51 +183,49 @@ The **Documento** (Document) category can include PDFs, EPUBs, and archives: it 
 - Disabled rules or rules without criteria select nothing.
 - Comparisons are case-insensitive.
 
-Earlier rules with a suffix such as `.pdf` in the pattern are interpreted using the name alone. To restrict matches to PDFs, specify `pdf` in the Extensions field. An already saved type criterion continues to apply.
-
 ### Classification and manual selection
 
-- **Certa** (Certain): matches an inclusion and no exclusion; initially selected.
-- **Possibile** (Possible): resembles a rule but does not fully match it; not initially selected.
-- **Non corrispondente** (Not matching): does not match the rules; not selected.
-- **Escluso** (Excluded): matches an explicit exclusion; not selected.
+- **Exact match**: matches an inclusion and no exclusion; initially selected.
+- **Possible match**: resembles a rule but does not fully match it; not initially selected.
+- **No match**: does not match the rules; not selected.
+- **Excluded**: matches an explicit exclusion; not selected.
 
 An unwanted variant may appear as Possible without being downloaded automatically. You can manually select even an excluded item: the choice applies only to the current operation and does not change the filters. Confirming a rule change recalculates automatic selections.
 
 ### Configure from examples
 
-1. After reading a channel, open **Filtri → Da esempi** (Filters → From examples) and search for the desired names.
-2. Mark multiple files as **Desiderato** (Desired) or **Indesiderato** (Undesired). Labels remain assigned even when the search hides the files; **Solo esempi già contrassegnati** (Only already marked examples) is available.
-3. Tap **Proponi regole comuni** (Suggest common rules).
+1. After reading a channel, open **Filters → From examples** and search for the desired names.
+2. Mark multiple files as **Wanted** or **Unwanted**. Labels remain assigned even when the search hides the files; **Marked examples only** is available.
+3. Tap **Suggest common rules**.
 4. Check patterns, counts, the preview, and warnings, then confirm. The preview lists only files that would be automatically selected, without Possible, Not matching, or Excluded items.
 
 Dates are generalized while preserving the complete root. Fifty issues of the same publication can produce a single rule instead of fifty exact names. With positive examples, negative examples constrain the suggestions without generating a blacklist for each variant. Ambiguous suggestions are flagged and omitted. With only negative examples, grouped exclusions may be suggested.
 
-Generation from examples looks for families of names with variable dates: **it does not automatically infer a rule for an extension**, such as “all PDFs”. Different names can produce multiple rules; names without a recognized date are flagged without a suggested rule. To choose a format, use a manual rule as described below. Arbitrary regular expressions are not exposed. The preview also considers old rules: a broad inclusion such as “contains La_Gente” may continue to include local editions until it is modified or disabled.
+Generation from examples looks for families of names with variable dates: **it does not automatically infer a rule for an extension**, such as “all PDFs”. Different names can produce multiple rules; names without a recognized date are flagged without a suggested rule. To choose a format, use a manual rule as described below. Arbitrary regular expressions are not exposed. The preview also considers saved active rules: a broad inclusion such as “contains La_Gente” may continue to include local editions until it is modified or disabled.
 
 ### Select only PDFs
 
-Under **Filtri → Nuova regola** (Filters → New rule):
+Under **Filters → New rule**:
 
-1. Choose the favorite channel and give the rule a name, for example **Solo PDF** (PDF only).
-2. Leave the action as **Inclusione** (Inclusion).
-3. Leave **Radice esatta prima della data** (Exact root before the date) and **Modello del nome senza estensione** (Name pattern without extension) empty.
-4. Open **Altri criteri · formato e contenuto** (Other criteria · format and content) and set **Estensioni** (Extensions) to `pdf`. Leave contained text and MIME empty and keep the category on **Qualsiasi** (Any).
+1. Choose the favorite channel and give the rule a name, for example **PDF only**.
+2. Leave the action as **Inclusion**.
+3. Leave **Exact prefix before date** and **Filename pattern without extension** empty.
+4. Open **More criteria · format and contents** and set **Extensions** to `pdf`. Leave contained text and MIME empty and keep the category on **Any**.
 5. Confirm saving.
 
 The rule selects PDFs regardless of name and date. An exclusion rule for every other format is unnecessary: files that do not match any inclusion remain unselected. To get *only* PDFs in the channel, disable any other inclusions that select different formats; existing active exclusions may still exclude some PDFs. Manual selection remains available.
 
 ## Downloads and file management
 
-The working folder is outside the app's private storage. The default path is `Download/TgFM`; **Configura → File e cartella → Scegli cartella** (Configure → File and folder → Choose folder) lets you choose another local folder, including one on an accessible removable volume. Cloud folders are not supported as a direct TDLib destination. Android 11 and later require **All files access**, because TDLib must access the real path; document picker permission alone is not enough. Android 8–10 requires permission to write to shared storage.
+The working folder is outside the app's private storage. The default path is `Download/TgFM`; **Settings → Files and folder → Choose folder** lets you choose another local folder, including one on an accessible removable volume. Cloud folders are not supported as a direct TDLib destination. Android 11 and later require **All files access**, because TDLib must access the real path; document picker permission alone is not enough. Android 8–10 requires permission to write to shared storage.
 
 Complete files reside in the chosen folder. TDLib writes to `.tgfm-cache/tdlib` inside it; when saved, the complete file is renamed on the same filesystem, without a second complete copy. The filesystem must allow this operation and files of the required size: FAT32, for example, does not support files of 4 GiB or more. No fallback to private storage or an additional full copy is performed.
 
 Filters and files in the external folder are separate from the Telegram session. Setting up new access does not recover a previous session.
 
-Changing folders closes and reopens TDLib without moving or deleting files in the previous external folder. The cache can be explicitly deleted with **Svuota cache temporanea** (Clear temporary cache) when transfers are stopped; this does not delete final files.
+Changing folders closes and reopens TDLib without moving or deleting files in the previous external folder. The cache can be explicitly deleted with **Clear temporary cache** when transfers are stopped; this does not delete final files.
 
-Under **Configura → File e cartella**, **Cancella i download precedenti** (Delete previous downloads) applies to Save and Share from Selezione:
+Under **Settings → Files and folder**, **Clear previous downloads** applies to Save and Share from Selection:
 
 | Setting | Behavior |
 |---|---|
@@ -241,38 +236,38 @@ FTP does not apply this general cleanup. Overwriting files with the same name is
 
 ## Sharing and saving
 
-**Salva** (Save) on the Selezione page downloads files directly to the working folder. **Condividi** (Share) first performs the same save (reusing files already available), then opens Android sharing. If some saves fail, sharing does not start automatically: you can retry or share completed files from the Download page.
+**Save** on the Selection page downloads files directly to the working folder. **Share** first performs the same save (reusing files already available), then opens Android sharing. If some saves fail, sharing does not start automatically: you can retry or share completed files from the Downloads page.
 
 Sharing uses `ACTION_SEND`/`ACTION_SEND_MULTIPLE`, `content://` URIs, and temporary read-only permissions. Receiving apps can read selected files or individual entries streamed from a saved archive. It creates neither a staging folder nor an additional copy; the receiving app may make its own copies and impose limits on size, number, and format. Returning to TgFM does not confirm delivery to the recipient.
 
-In Download, **Condividi** (Share), **Salva su FTP** (Save to FTP), the eye icon to open a file, and trash icons to delete a file or the selection are available. Local deletions do not change Telegram or the FTP server.
+In Downloads, **Share**, **Save to FTP**, the eye icon to open a file, and trash icons to delete a file or the selection are available. Local deletions do not change Telegram or the FTP server.
 
 ### Save to FTP
 
-Under **Configura → Server FTP**, configure the host, port, user, password, and an existing remote folder. Save changes before using **Verifica accesso** (Verify access). Passive mode is used, with binary FTP or **FTPS esplicito (TLS)** (Explicit FTPS). FTPS verifies the certificate chain and name; it does not automatically accept untrusted certificates. Plain FTP does not encrypt credentials or content. Verifica accesso checks login and the folder; it does not create remote files to test write access.
+Under **Settings → FTP server**, configure the host, port, user, password, and an existing remote folder. Save changes before using **Check access**. Passive mode is used, with binary FTP or **Explicit FTPS (TLS)**. FTPS verifies the certificate chain and name; it does not automatically accept untrusted certificates. Plain FTP does not encrypt credentials or content. The check verifies login and folder access; it does not create remote files to test write access.
 
-The confirmation for each upload lets you change **Conserva sul dispositivo** (Keep on device) for that operation only, starting from the saved preference. In 1.5.4 it also shows the destination and accepts a relative subfolder, such as `copies/november`, created if permitted by the server. The configured base folder remains unchanged.
+The confirmation for each upload lets you change **Keep on device** for that operation only, starting from the saved preference. The dialog shows the destination and accepts a relative subfolder, such as `copies/november`, created if permitted by the server. The configured base folder remains unchanged.
 
-| Conserva al termine (Keep when finished) | Behavior |
+| Keep after upload | Behavior |
 |---|---|
-| Off - default | One file at a time. After FTP confirmation the local copy is deleted, even if it came from Download |
+| Off - default | One file at a time. After FTP confirmation the local copy is deleted, even if it came from Downloads |
 | On | The file remains in the working folder; up to four simultaneous transfers |
 
 The early-upload behavior below applies to ordinary files without a per-upload subfolder. Archives are downloaded completely before their contents are read; archive groups are processed one at a time, with parallel downloads of their volumes. No extracted disk copy is created.
 
-From Download, existing files are uploaded. From Selezione, an already saved attachment is reused when available; otherwise the TDLib download starts and the upload can begin before it finishes. A single FTP `STOR` stream reads only contiguous bytes confirmed by `getFileDownloadedPrefixSize`, waiting when they are not yet available. The apparent size of the partial file is not used as an indication of downloaded bytes. The read/send buffer is 256 KiB; entire files are not loaded into RAM.
+From Download, existing files are uploaded. From Selection, an already saved attachment is reused when available; otherwise the TDLib download starts and the upload can begin before it finishes. A single FTP `STOR` stream reads only contiguous bytes confirmed by `getFileDownloadedPrefixSize`, waiting when they are not yet available. The apparent size of the partial file is not used as an indication of downloaded bytes. The read/send buffer is 256 KiB; entire files are not loaded into RAM.
 
 The download remains **complete on the device**: early upload can overlap receiving and sending, but does not reduce the space needed for the complete file. With Keep enabled, space is needed for all new selected files. Reported available space and a 16 MiB margin are checked; other processes may still consume space during the operation.
 
-The local copy is deleted only after a positive final response from the server and a size check, if the server supports `SIZE`. Writing the bytes to the socket is not enough. There is no universal remote hash verification. An error or cancellation keeps the complete file or the partial file in the cache; with Keep disabled, the queue stops at the first error to avoid accumulating more files. The cache is cleared manually from Configura. There are no automatic resumes, recoveries, or migrations on restart.
+The local copy is deleted only after a positive final response from the server and a size check, if the server supports `SIZE`. Writing the bytes to the socket is not enough. There is no universal remote hash verification. An error or cancellation keeps the complete file or the partial file in the cache; with Keep disabled, the queue stops at the first error to avoid accumulating more files. The cache is cleared manually from Settings. There are no automatic resumes, recoveries, or migrations on restart.
 
 Files with the same name on the server are overwritten directly. An error may leave an incomplete remote file and lose the previous file with the same name; no backups or temporary remote names are introduced. Speed depends on Telegram, the server, and the network; overlapping upload does not guarantee a speedup on every connection.
 
 ## Archive contents
 
-Multipart archives appear as one item in Selezione and are grouped before filename filters. **Salva** keeps the original archive and its volumes. **Condividi** and **Salva su FTP** can use either the originals or all files inside, without writing extracted copies to the device. Configura provides the default choice, which can be changed for each operation.
+Multipart archives appear as one item in Selection and are grouped before filename filters. **Save** keeps the original archive and its volumes. **Share** and **Save to FTP** can use either the originals or all files inside, without writing extracted copies to the device. In Downloads, if the selected archives come from channels with different settings, the dialog offers the general setting.
 
-Keep the archive available while receiving apps read shared contents. FTP's **Conserva** keeps the original archive; otherwise the local volumes are deleted only after the entire archive's upload succeeds. The FTP confirmation also accepts a relative destination such as `copies/november`, without changing the saved configuration. Remote cleanup after a failed archive transfer requires confirmation.
+Keep the archive available while receiving apps read shared contents. **Keep on device** keeps the original archive after an FTP upload; otherwise the local volumes are deleted only after the entire archive's upload succeeds. The FTP confirmation also accepts a relative destination such as `copies/november`, without changing the saved configuration. Remote cleanup after a failed archive transfer requires confirmation.
 
 Supported naming conventions include `.partN.rar`, `.rar/.rNN`, `.zNN/.zip`, `.7z.NNN` and `.zip.NNN`. Encrypted or unsupported archives can still be sent as originals. Actual format support depends on the bundled decoders.
 
@@ -315,7 +310,7 @@ The prebuilt TDLib library is included: **a normal app build does not require bu
 ### 1. Clone the repository
 
 ```bash
-git clone --branch main https://github.com/TheyKilledKenny/TgFM.git
+git clone --branch develop https://github.com/TheyKilledKenny/TgFM.git
 cd TgFM
 ```
 
@@ -338,7 +333,7 @@ sdk.dir=/absolute/path/to/Android/Sdk
 
 ### 3. Generate the release APK
 
-The distributed build uses the **release** variant, with Java and native debugging disabled. Signing keys and passwords are not included in the repository.
+To build the test APK, run `./gradlew :app:assembleDebug`. The output is `app/build/outputs/apk/debug/app-debug.apk`. To build a signed **release** APK, follow the steps below.
 
 For a signed build, set these environment variables:
 
@@ -424,7 +419,9 @@ The names Telegram and WhatsApp identify third-party services. TgFM is an indepe
 
 ### 1.5.8 - Favorite channel settings
 
-Covers start off for every favorite, including after updating. Choose Today, Last 7 days or All files as the initial reading period. You can still change the period for a scan in Selection. For archives, use the general setting or choose the original or its contents. Downloads uses the general setting when selected archives have conflicting defaults.
+Each channel has a profile under **Settings → Favorite channels**. For a magazine channel, for example, turn on **Photo covers** to display the preceding post’s photo beside the file. For an infrequently updated group, choose **Last 7 days** as its default period. You can also choose whether to share original archives from that channel or send their contents.
+
+Profile pictures help you identify channels. Tap a picture to mark a favorite. In Selection, open an image file’s details to see a preview, even when photo covers are turned off.
 
 ### 1.5.7 - App language
 
@@ -432,37 +429,28 @@ English and Italian are available for navigation, dialogs, accessibility labels 
 
 ### 1.5.6 - Cover selection
 
-The cover selects its file. Cover photos are excluded from the selectable list. ARM64 test APK, version code 15.
+In channels with covers enabled, tap the image to select the file or tap the rest of the row for details. **Select all** skips photos used as covers, so you can save the document without saving its cover as a separate file.
 
-### 1.5.5 — Development build
+### 1.5.5 - Channel rule groups and photo covers
 
-Collapsible filter groups, expand/collapse all, optional preceding-photo covers and separate photo descriptions in file details. Version code 14.
+In Filters, collapse one channel’s rules to find another channel’s rules more easily. When a channel posts a photo immediately before an attachment, you can display that photo as its cover and read the caption in the file details.
 
 ### 1.5.4 - Archive sharing and FTP
 
-Multipart grouping before filters; virtual sharing of archive contents; streaming decompression to FTP; per-upload FTP subfolders; confirmation before remote cleanup. Version code 13, signed ARM64 release APK.
+Volumes of an archive split across posts appear as one item. Share or upload the original volumes, or send the files inside without saving a second, extracted copy on your phone. Each FTP upload can use its own subfolder. If an archive upload fails, TgFM asks before attempting to remove affected files from the server.
 
 ### 1.5.3 - First stable release
 
-- Interface reorganized into the four sections Selezione, Download, Filtri, and Configura.
-- Fixed controls above the navigation, compact lists, and full-width filenames in Selezione and Download.
-- Full details accessible by tapping an attachment's name or symbol in Selezione.
-- Rules grouped by channel, full-page editor, example selection with icons, and a preview of selected files only.
-- Configuration divided into Telegram, Canali preferiti, File e cartella, and Server FTP, with a visible way back from subsections.
-- Conserva sul dispositivo option in FTP confirmation, valid only for the current upload and initialized from the saved preference.
-
-The limitation of generation from examples by extension remains: use the manual **Solo PDF** rule. The filter engine was not changed in this version.
-
-The package is **1.5.3**, version code **12**, ARM64 release APK with debugging disabled. The `v1.5.3` tag identifies the release source; the signed APK and checksum are attached to the GitHub Release. The signature is the same as previous packages: the app can be updated without uninstalling it or deleting its data. The version remains in the 1.5.x series.
+Selection and Downloads keep their action buttons above the navigation bar, so you can act on a selection without scrolling back through the list. Tap an attachment for its full details. In Filters, rules are grouped by channel and the preview shows which files your example-based rules would select. When sending files to FTP, you can choose whether to keep the local copies for that upload.
 
 ### 1.5.2 - Telegram access
 
-Fixed a TDLib initialization deadlock that could also prevent a new login. Removed commands for recovering previous access; Configura accesso starts a new session. Errors remain visible in the Telegram section.
+Fixed a startup issue that could prevent Telegram sign-in even with valid credentials. If sign-in fails, the error stays visible on the Telegram screen.
 
 ### 1.5.1 - File access
 
-Fixed the storage access request and handling of the return from Android settings. The Telegram initialization issue was resolved in the following 1.5.2 release.
+When Android requires file access to be granted in system settings, TgFM checks the permission again when you return so you can continue setting up the folder.
 
 ### 1.5.0 - External folder and FTP
 
-External working folder with TDLib cache inside it, sharing of saved files, FTP/FTPS upload even during download, Keep when finished option, and individual or multiple deletion of local files.
+Choose a folder on your device for downloads, share saved files and upload them to an FTP or FTPS server. Some uploads can start while Telegram is still downloading. **Keep after upload** keeps the local copy after a successful transfer. In Downloads you can delete one file or several selected files.
