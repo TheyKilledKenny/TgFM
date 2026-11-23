@@ -163,7 +163,7 @@ import java.time.format.DateTimeFormatter
      }
     }
     if (editJson != null) {
-     RuleEditor(RuleJson.decode(JSONObject(editJson!!)), s.favorites, s.channel?.id, s.attachments, onDismiss = { editJson = null }, onConfirm = { vm.saveRule(it); editJson = null })
+     RuleEditor(vm, RuleJson.decode(JSONObject(editJson!!)), s.favorites, s.channel?.id, s.attachments, onDismiss = { editJson = null }, onConfirm = { vm.saveRule(it); editJson = null })
     } else if (editFtp) {
      FtpEditor(s.ftp, onDismiss = { editFtp = false }, onConfirm = { vm.saveFtp(it); editFtp = false }, onTest = vm::testFtp, enabled = !s.busy)
     } else LazyColumn(Modifier.fillMaxSize().testTag("main-list"), state = listState, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -251,7 +251,7 @@ import java.time.format.DateTimeFormatter
        if (s.auth == "authorizationStateReady") {
         item { InfoCard {
          Text(Words.get(R.string.active_channel), style = MaterialTheme.typography.labelMedium)
-         Text(s.channel?.title ?: Words.get(R.string.no_channel), style = MaterialTheme.typography.titleMedium)
+         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { s.channel?.let { ChannelAvatar(it, vm) }; Text(s.channel?.title ?: Words.get(R.string.no_channel), style = MaterialTheme.typography.titleMedium) }
          Button(onClick = vm::loadChannels, enabled = !s.busy) { Text(Words.get(R.string.refresh_channels_and_groups)) }
         } }
         item {
@@ -264,11 +264,18 @@ import java.time.format.DateTimeFormatter
          val favorite = s.favorites.any { it.id == channel.id }
          OutlinedCard(Modifier.fillMaxWidth()) {
           Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-           Checkbox(favorite, { checked ->
+           Box(Modifier.size(48.dp).testTag("favorite:${channel.id}")
+            .semantics { contentDescription = channel.title }
+            .toggleable(value = favorite, enabled = !s.busy, role = androidx.compose.ui.semantics.Role.Checkbox, onValueChange = { checked ->
             if (checked) vm.addFavorite(channel)
             else if (s.rules.any { it.channelId == channel.id }) removeFavoriteId = channel.id
             else vm.removeFavorite(channel)
-           }, enabled = !s.busy, modifier = Modifier.testTag("favorite:${channel.id}"))
+           }), contentAlignment = Alignment.Center) {
+            ChannelAvatar(channel, vm, Modifier.size(38.dp))
+            Box(Modifier.align(Alignment.BottomEnd).background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.extraSmall)) {
+             Checkbox(favorite, onCheckedChange = null, enabled = !s.busy, modifier = Modifier.size(20.dp))
+            }
+           }
            TextButton(onClick = { if (favorite) vm.chooseChannel(channel) else vm.addFavorite(channel) }, enabled = !s.busy, modifier = Modifier.weight(1f)) {
             Text(channel.title, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
            }
@@ -323,6 +330,7 @@ import java.time.format.DateTimeFormatter
            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = if(collapsed) Words.get(R.string.expand_rules) else Words.get(R.string.collapse_rules)) {
             collapsedRuleGroups = if(collapsed) collapsedRuleGroups - groupKey else collapsedRuleGroups + groupKey
            }.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+           s.favorites.firstOrNull { it.id == channelId }?.let { ChannelAvatar(it, vm); Spacer(Modifier.width(8.dp)) }
            Column(Modifier.weight(1f)) {
             Text(s.favorites.firstOrNull { it.id == channelId }?.title ?: Words.get(R.string.unassigned), style = MaterialTheme.typography.titleSmall)
             Text(Words.get(R.string.rules_active, rules.size, rules.count { it.enabled }), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -386,15 +394,17 @@ import java.time.format.DateTimeFormatter
         Text(Words.get(R.string.channel_or_group), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Box {
          TextButton(onClick = { selectedChannelMenu = true }, enabled = !s.busy && s.favorites.isNotEmpty(), contentPadding = PaddingValues(0.dp), modifier = Modifier.fillMaxWidth()) {
+          s.channel?.let { ChannelAvatar(it, vm, Modifier.size(38.dp)); Spacer(Modifier.width(10.dp)) }
           Text(s.channel?.title ?: Words.get(R.string.choose_a_favorite), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
           Icon(UiIcons.Down, Words.get(R.string.switch_favorite_channel))
          }
          DropdownMenu(expanded = selectedChannelMenu, onDismissRequest = { selectedChannelMenu = false }) {
-          s.favorites.forEach { favorite -> DropdownMenuItem(text = { Text(favorite.title) }, onClick = { vm.chooseChannel(favorite); selectedChannelMenu = false }) }
+          s.favorites.forEach { favorite -> DropdownMenuItem(leadingIcon = { ChannelAvatar(favorite, vm) }, text = { Text(favorite.title) }, onClick = { vm.chooseChannel(favorite); selectedChannelMenu = false }) }
          }
         }
         if (s.connection !in setOf(R.string.connected, R.string.updating)) Text(Words.get(R.string.previously_read_attachments_are_available, Words.get(s.connection)), style = MaterialTheme.typography.labelSmall)
        }
+       item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) }
        item { PostPeriodSelector(s.postPeriod, vm::postPeriod, enabled = !s.busy) {
         Button(onClick = vm::scan, enabled = !s.busy && s.auth == "authorizationStateReady" && s.channel != null && s.postPeriod.error() == null) { Text(Words.get(R.string.read)) }
        } }
@@ -497,6 +507,11 @@ import java.time.format.DateTimeFormatter
     Text("${a.category.label} · .${a.extension} · ${sizeLabel(a.size)}")
     if (a.date > 0) Text(DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.DEFAULT, Words.locale).format(Date(a.date * 1000)))
     Text(FilterEngine.classify(a, s.activeRules).label)
+    a.imagePreview?.let { preview ->
+     CoverThumbnail(preview, vm, Modifier.fillMaxWidth().height(180.dp), description = a.name,
+      localPath = s.downloads.firstOrNull { it.sourceKey == a.key }?.path,
+      fallback = { Text(Words.get(R.string.no_image_preview), style = MaterialTheme.typography.bodySmall) })
+    }
     if(s.showCovers) a.cover?.let { cover ->
      CoverThumbnail(cover, vm, Modifier.fillMaxWidth().heightIn(max = 220.dp).height(180.dp))
      if(cover.caption.isNotBlank() && cover.caption != a.caption) {
@@ -513,7 +528,7 @@ import java.time.format.DateTimeFormatter
    confirmButton = { TextButton(onClick = { permissionPromptHandled = true; onStorageAccess() }) { Text(Words.get(R.string.grant_access)) } },
    dismissButton = { TextButton(onClick = { permissionPromptHandled = true }) { Text(Words.get(R.string.not_now)) } })
   s.favorites.firstOrNull { it.id == profileId }?.let { favorite ->
-   ChannelProfileDialog(favorite, onDismiss = { profileId = null }, onSave = { profile ->
+   ChannelProfileDialog(vm, favorite, onDismiss = { profileId = null }, onSave = { profile ->
     profileId = null
     vm.saveProfile(favorite.id, profile)
    })
@@ -582,7 +597,7 @@ fun sizeLabel(size: Long): String = when { size <= 0 -> Words.get(R.string.size_
 private fun authLabel(state: String) = when(state) { "authorizationStateReady" -> Words.get(R.string.account_connected); "authorizationStateWaitPhoneNumber" -> Words.get(R.string.enter_your_phone_number); "authorizationStateWaitCode" -> Words.get(R.string.waiting_for_code); "authorizationStateWaitPassword" -> Words.get(R.string.two_step_verification); "notStarted", "authorizationStateClosed" -> Words.get(R.string.sign_in_setup_required); else -> Words.get(R.string.signing_in) }
 private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBlank() }, r.contains.takeIf { it.isNotBlank() }?.let { Words.get(R.string.contains, it) }, r.extensions.takeIf { it.isNotEmpty() }?.joinToString(", "), r.mime.takeIf { it.isNotBlank() }, r.category?.label).joinToString(" · ")
 
-@Composable private fun RuleEditor(rule: Rule, favorites: List<Channel>, activeChannelId: Long?, examples: List<Attachment>, onDismiss: () -> Unit, onConfirm: (Rule) -> Unit) {
+@Composable private fun RuleEditor(vm: AppViewModel, rule: Rule, favorites: List<Channel>, activeChannelId: Long?, examples: List<Attachment>, onDismiss: () -> Unit, onConfirm: (Rule) -> Unit) {
  var title by rememberSaveable(rule.id) { mutableStateOf(rule.title) }
  var template by rememberSaveable(rule.id) { mutableStateOf(FilterEditing.nameOnly(rule.template)) }
  var contains by rememberSaveable(rule.id) { mutableStateOf(rule.contains) }
@@ -600,9 +615,9 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
  }) {
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
    Box {
-    OutlinedButton(onClick = { channelMenu = true }, modifier = Modifier.fillMaxWidth()) { Text(favorites.firstOrNull { it.id == channelId }?.title ?: Words.get(R.string.assign_to_a_favorite)); Icon(UiIcons.Down, null) }
+    OutlinedButton(onClick = { channelMenu = true }, modifier = Modifier.fillMaxWidth()) { favorites.firstOrNull { it.id == channelId }?.let { ChannelAvatar(it, vm); Spacer(Modifier.width(8.dp)) }; Text(favorites.firstOrNull { it.id == channelId }?.title ?: Words.get(R.string.assign_to_a_favorite)); Icon(UiIcons.Down, null) }
     DropdownMenu(expanded = channelMenu, onDismissRequest = { channelMenu = false }) {
-     favorites.forEach { favorite -> DropdownMenuItem(text = { Text(favorite.title) }, onClick = { channelId = favorite.id; channelMenu = false }) }
+     favorites.forEach { favorite -> DropdownMenuItem(leadingIcon = { ChannelAvatar(favorite, vm) }, text = { Text(favorite.title) }, onClick = { channelId = favorite.id; channelMenu = false }) }
     }
    }
    OutlinedTextField(title, { title = it }, modifier = Modifier.fillMaxWidth(), label = { Text(Words.get(R.string.rule_name)) }, singleLine = true)
@@ -712,11 +727,11 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
  }
 }
 
-@Composable private fun ChannelProfileDialog(channel: Channel, onDismiss: () -> Unit, onSave: (ChannelProfile) -> Unit) {
+@Composable private fun ChannelProfileDialog(vm: AppViewModel, channel: Channel, onDismiss: () -> Unit, onSave: (ChannelProfile) -> Unit) {
  var covers by rememberSaveable(channel.id) { mutableStateOf(channel.profile.covers) }
  var period by rememberSaveable(channel.id) { mutableStateOf(channel.profile.initialPeriod) }
  var contents by rememberSaveable(channel.id) { mutableStateOf(channel.profile.archiveContents) }
- AlertDialog(onDismissRequest = onDismiss, title = { Text(channel.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+ AlertDialog(onDismissRequest = onDismiss, title = { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { ChannelAvatar(channel, vm); Text(channel.title, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
   text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
    Row(Modifier.fillMaxWidth().toggleable(value = covers, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = { covers = it }),
     verticalAlignment = Alignment.CenterVertically) {

@@ -87,9 +87,15 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  fun saveProfile(id: Long, profile: ChannelProfile) = launchOperation(Words.get(R.string.saving_channel)) {
   applyConfiguration(app.preferences.saveProfile(id, profile))
  }
+ suspend fun channelAvatar(id: Long): CoverImage? {
+  if (_state.value.auth != "authorizationStateReady") return null
+  return try {
+   it.tgfm.telegram.AttachmentMapper.chatAvatar(tg.send(request("getChat", "chat_id" to id)))
+  } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+ }
  suspend fun coverFile(id: Int): File? {
   coverSlots.acquire()
-  try { return if(_state.value.showCovers && _state.value.auth == "authorizationStateReady") tg.cover(id) else null }
+  try { return if(_state.value.auth == "authorizationStateReady") tg.cover(id) else null }
   catch(e: CancellationException) { throw e }
   catch(_: Exception) { return null }
   finally { coverSlots.release() }

@@ -22,7 +22,7 @@ class TelegramReader(private val send: suspend (JSONObject) -> JSONObject) {
     currentCoroutineContext().ensureActive()
     val chat = send(request("getChat", "chat_id" to ids.getLong(i)))
     if (chat.getJSONObject("type").optString("@type") in setOf("chatTypeSupergroup", "chatTypeBasicGroup")) {
-     found[chat.getLong("id")] = Channel(chat.getLong("id"), chat.getString("title"))
+     found[chat.getLong("id")] = Channel(chat.getLong("id"), chat.getString("title"), avatar = AttachmentMapper.chatAvatar(chat))
      if (found.size % 100 == 0) progress(sorted(found.values))
     }
    }

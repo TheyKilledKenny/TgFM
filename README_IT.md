@@ -1,6 +1,6 @@
 [English](README.md) | [Italiano](README_IT.md)
 
-Questo progetto è mantenuto da TheyKilledKenny. Il codice è stato scritto da una combinazione di intelligenza umana, caffeina e Codex. 😄
+Vibe Coding! Questo codice è stato sviluppato da Codex, con la supervisione di TheyKilledKenny.
 
 # TgFM - Telegram File Manager
 
@@ -19,6 +19,8 @@ Android 8.0 o successivo · ARM64 · Distribuzione tramite [GitHub Releases](htt
 La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contiene `TgFM-1.5.4.apk` e il checksum SHA-256 nella sezione **Assets**.
 
 **Build di sviluppo** · [Scarica l’APK di test 1.5.8](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256)
+
+[Specifiche funzionali e tecniche della 1.5.8](docs/SPECIFICHE.md)
 
 ## Indice
 

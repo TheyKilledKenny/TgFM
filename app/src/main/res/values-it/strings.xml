@@ -464,4 +464,5 @@
     <string name="general_setting">Usa scelta generale</string>
     <string name="original_archive">Archivio originale</string>
     <string name="archive_files">Contenuto archivio</string>
+    <string name="no_image_preview">Anteprima immagine non disponibile</string>
 </resources>

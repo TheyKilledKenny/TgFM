@@ -464,4 +464,5 @@
     <string name="general_setting">Use general setting</string>
     <string name="original_archive">Original archive</string>
     <string name="archive_files">Archive contents</string>
+    <string name="no_image_preview">Image preview unavailable</string>
 </resources>

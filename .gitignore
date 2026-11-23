@@ -21,6 +21,7 @@ vendor/
 /app/src/androidTest/
 /docs/*
 !/docs/licenses/
+!/docs/SPECIFICHE.md
 
 # Public README artwork
 !/docs/assets/
