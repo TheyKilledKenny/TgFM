@@ -20,8 +20,6 @@ Android 8.0 or later · ARM64 · Distributed through [GitHub Releases](https://g
 
 **Development build** · [Download the 1.5.8 test APK](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256)
 
-[Functional and technical specification for 1.5.8 (Italian)](docs/SPECIFICHE.md)
-
 ## Contents
 
 - [Features](#features)

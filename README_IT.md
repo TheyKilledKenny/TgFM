@@ -20,8 +20,6 @@ La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) 
 
 **Build di sviluppo** · [Scarica l’APK di test 1.5.8](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk) · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256)
 
-[Specifiche funzionali e tecniche della 1.5.8](docs/SPECIFICHE.md)
-
 ## Indice
 
 - [Funzionalità](#funzionalità)
