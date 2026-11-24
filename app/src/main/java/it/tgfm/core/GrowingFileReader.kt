@@ -25,7 +25,7 @@ class GrowingFileReader(private val snapshot: suspend (Long) -> AvailableBytes, 
   while (true) {
    currentCoroutineContext().ensureActive()
    val previous = known
-   val state = if (previous != null && (previous.complete || position < availableUntil)) previous.copy(readable = (availableUntil - position).coerceAtLeast(0))
+   val state = if (previous?.file != null && (previous.complete || position < availableUntil)) previous.copy(readable = (availableUntil - position).coerceAtLeast(0))
     else snapshot(position).also { known = it; availableUntil = position + it.readable }
    require(state.readable >= 0 && state.size >= 0) { Words.get(R.string.invalid_file_availability) }
    if (state.complete && position == state.size) { finalSize = state.size; return -1 }

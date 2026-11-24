@@ -18,17 +18,17 @@ object FilterEngine {
   r.mime.isNotBlank() && !Regex("[\\w.+-]+/(?:[\\w.+-]+|\\*)").matches(r.mime) -> Words.get(R.string.invalid_mime_type_try_application_pdf_or)
   else -> null
  }
- fun templateMatches(template: String, name: String): Boolean {
-  val pattern = FilterEditing.nameOnly(template).split("{data}").joinToString(DATE) { Regex.escape(it) }
-  return Regex("^$pattern$", RegexOption.IGNORE_CASE).matches(FilterEditing.fileNameOnly(name))
+ fun templateMatches(template: String, name: String, extensions: Set<String> = emptySet()): Boolean {
+  val pattern = FilterEditing.nameOnly(template, extensions).split("{data}").joinToString(DATE) { Regex.escape(it) }
+  return Regex("^$pattern$", RegexOption.IGNORE_CASE).matches(FilterEditing.nameOnly(name, extensions))
  }
  private fun typeMatches(r: Rule, a: Attachment): Boolean =
   (r.extensions.isEmpty() || a.extension in r.extensions.map { norm(it).removePrefix(".") }) &&
   (r.category == null || r.category == a.category) &&
   (r.mime.isBlank() || if (r.mime.endsWith("/*")) norm(a.mime).startsWith(norm(r.mime).dropLast(1)) else norm(r.mime) == norm(a.mime))
  private fun matches(r: Rule, a: Attachment): Boolean = validate(r) == null && typeMatches(r, a) &&
-  (r.template.isBlank() || templateMatches(r.template, a.name)) &&
-  (r.contains.isBlank() || norm(FilterEditing.fileNameOnly(a.name)).contains(norm(r.contains)))
+  (r.template.isBlank() || templateMatches(r.template, a.name, r.extensions)) &&
+  (r.contains.isBlank() || norm(FilterEditing.nameOnly(a.name, r.extensions)).contains(norm(r.contains)))
  fun classify(a: Attachment, rules: List<Rule>): Match {
   val active = rules.filter { it.enabled && (it.channelId == null || it.channelId == a.chatId) }
   if (active.any { it.exclude && matches(it, a) }) return Match.EXCLUDED
@@ -37,10 +37,10 @@ object FilterEngine {
   if (include.any { r ->
     validate(r) == null && typeMatches(r, a) && when {
      r.template.isNotBlank() -> {
-      val stem = norm(r.template).substringBefore("{data}").substringBeforeLast('.', norm(r.template).substringBefore("{data}")).trim('_', '-', ' ')
+      val stem = norm(FilterEditing.nameOnly(r.template, r.extensions)).substringBefore("{data}").trim('_', '-', ' ')
       stem.length >= 4 && (norm(a.name).contains(stem) || similarity(stem, norm(a.name).take(stem.length)) >= 0.8)
      }
-     r.contains.length >= 4 -> similarity(norm(r.contains), norm(a.name).substringBeforeLast('.')) >= 0.75
+     r.contains.length >= 4 -> similarity(norm(r.contains), norm(FilterEditing.nameOnly(a.name, r.extensions))) >= 0.75
      else -> false
     }
    }) return Match.POSSIBLE
@@ -59,7 +59,7 @@ object FilterEngine {
  /** Proposals are drafts, never persisted implicitly. */
  fun suggest(a: Attachment, exclude: Boolean): Rule {
   val date = Regex("(?<![A-Za-zÀ-ÿ0-9])$DATE(?![A-Za-zÀ-ÿ0-9])", RegexOption.IGNORE_CASE)
-  val stem = FilterEditing.fileNameOnly(a.name)
+  val stem = FilterEditing.nameOnly(a.name)
   val proposed = date.replace(stem, "{data}")
   return Rule(title = (if (exclude) Words.get(R.string.exclude) else Words.get(R.string.include)) + stem, exclude = exclude, template = proposed, extensions = emptySet(), category = a.category)
  }
@@ -94,8 +94,8 @@ object FilterEngine {
   return LearningResult(drafts, warnings)
  }
  fun sameCriteria(a: Rule, b: Rule): Boolean =
-  a.copy(id = "", title = "", template = FilterEditing.nameOnly(a.template)) ==
-   b.copy(id = "", title = "", template = FilterEditing.nameOnly(b.template))
+  a.copy(id = "", title = "", template = FilterEditing.nameOnly(a.template, a.extensions)) ==
+   b.copy(id = "", title = "", template = FilterEditing.nameOnly(b.template, b.extensions))
 }
 
 data class LearningResult(val rules: List<Rule>, val warnings: List<String>)

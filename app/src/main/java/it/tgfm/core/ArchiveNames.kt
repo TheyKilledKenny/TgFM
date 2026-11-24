@@ -7,10 +7,14 @@ import it.tgfm.Words
 object ArchiveNames {
  data class Part(val name: String, val number: Int, val first: Int)
  fun part(name: String): Part? {
-  Regex("(?i)^(.+)\\.part(\\d+)\\.rar$").matchEntire(name)?.let { return Part(it.groupValues[1]+".rar", it.groupValues[2].toInt(), 1) }
-  Regex("(?i)^(.+\\.(?:7z|zip))\\.(\\d{3,})$").matchEntire(name)?.let { return Part(it.groupValues[1], it.groupValues[2].toInt(), 1) }
-  Regex("(?i)^(.+)\\.r(\\d{2,})$").matchEntire(name)?.let { return Part(it.groupValues[1]+".rar", it.groupValues[2].toInt()+1, 0) }
-  Regex("(?i)^(.+)\\.z(\\d{2,})$").matchEntire(name)?.let { return Part(it.groupValues[1]+".zip", it.groupValues[2].toInt(), 1) }
+  Regex("(?i)^(.+)\\.part(\\d+)\\.rar$").matchEntire(name)?.let { return Part(it.groupValues[1]+".rar", it.groupValues[2].toIntOrNull() ?: return null, 1) }
+  Regex("(?i)^(.+\\.(?:7z|zip))\\.(\\d{3,})$").matchEntire(name)?.let { return Part(it.groupValues[1], it.groupValues[2].toIntOrNull() ?: return null, 1) }
+  Regex("(?i)^(.+)\\.r(\\d{2,})$").matchEntire(name)?.let {
+   val number = it.groupValues[2].toIntOrNull() ?: return null
+   if (number == Int.MAX_VALUE) return null
+   return Part(it.groupValues[1]+".rar", number + 1, 0)
+  }
+  Regex("(?i)^(.+)\\.z(\\d{2,})$").matchEntire(name)?.let { return Part(it.groupValues[1]+".zip", it.groupValues[2].toIntOrNull() ?: return null, 1) }
   return null
  }
  fun family(name: String): String {

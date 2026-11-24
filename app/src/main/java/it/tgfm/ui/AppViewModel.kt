@@ -141,22 +141,20 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     }
    }
   } }
-  launchOperation(Words.get(R.string.opening_archive)) {
-   try {
-    val credentials = savedCredentials()
-    val initialConfig = app.preferences.configuration.first()
-    val clearPrevious = app.preferences.clearBeforeDownload.first()
-    applyConfiguration(initialConfig)
-    _state.update { it.copy(clearBeforeDownload = clearPrevious) }
-    updateStorageState()
-    try { _state.update { it.copy(ftp = app.vault.loadFtp()) } }
-    catch (_: Exception) { notify(Words.get(R.string.could_not_read_ftp_settings_set_up)) }
-    refreshDownloads(selectAll = true)
-    if (credentials != null && app.storage.folder.hasAccess()) {
-     app.storage.folder.requireReady()
-     tg.start(credentials)
-    }
-   } finally { _state.update { it.copy(ready = true) } }
+  launchOperation(Words.get(R.string.opening_archive), onFinished = { _state.update { it.copy(ready = true) } }) {
+   val credentials = savedCredentials()
+   val initialConfig = app.preferences.configuration.first()
+   val clearPrevious = app.preferences.clearBeforeDownload.first()
+   applyConfiguration(initialConfig)
+   _state.update { it.copy(clearBeforeDownload = clearPrevious) }
+   updateStorageState()
+   try { _state.update { it.copy(ftp = app.vault.loadFtp()) } }
+   catch (_: Exception) { notify(Words.get(R.string.could_not_read_ftp_settings_set_up)) }
+   refreshDownloads(selectAll = true)
+   if (credentials != null && app.storage.folder.hasAccess()) {
+    app.storage.folder.requireReady()
+    tg.start(credentials)
+   }
   }
  }
  private fun savedCredentials(): Credentials? = try { app.vault.load() } catch (_: Exception) {
@@ -200,27 +198,33 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   viewModelScope.launch { runCatching { app.preferences.saveAttachmentView(value) }.onFailure { notify(Words.get(R.string.could_not_save_preference, it.message)) } }
  }
  fun postPeriod(value: PostPeriod) { if (!_state.value.busy) _state.update { it.copy(postPeriod = value) } }
- private fun launchOperation(label: String, transfer: Boolean = false, body: suspend () -> Unit) {
+ private fun launchOperation(label: String, transfer: Boolean = false, onFinished: () -> Unit = {}, body: suspend () -> Unit) {
   if (_state.value.busy) return
   _state.update { it.copy(busy = true, progress = label, fraction = null, failures = emptyList()) }
-  operation = viewModelScope.launch(Dispatchers.IO) {
+  val job = viewModelScope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
    try {
     if (transfer) ContextCompat.startForegroundService(app, Intent(app, TransferService::class.java))
+    ensureActive()
     body()
    } catch (e: TimeoutCancellationException) { notify(Words.get(R.string.timed_out_check_your_connection_and_try)) }
-   catch (e: CancellationException) { notify(Words.get(R.string.operation_canceled_previously_read_attachments_and_completed)) }
+   catch (e: CancellationException) { throw e }
    catch (e: Exception) { notify(e.message ?: Words.get(R.string.operation_failed)) }
    catch (e: UnsatisfiedLinkError) { notify(Words.get(R.string.tdlib_unavailable_for_this_device, e.message)) }
    finally {
     if (transfer) app.stopService(Intent(app, TransferService::class.java))
-    _state.update { it.copy(activeDownloads = emptyMap()) }
-    _state.update { it.copy(busy = false, fraction = null, progress = if (transfer) it.progress else "") }
-    if (foregroundRecheckPending && _state.value.ready) {
-     foregroundRecheckPending = false
-     onForeground()
-    }
    }
   }
+  operation = job
+  job.invokeOnCompletion { cause ->
+   onFinished()
+   if (cause is CancellationException) notify(Words.get(R.string.operation_canceled_previously_read_attachments_and_completed))
+   _state.update { it.copy(busy = false, fraction = null, activeDownloads = emptyMap(), progress = if (transfer) it.progress else "") }
+   if (foregroundRecheckPending && _state.value.ready) {
+    foregroundRecheckPending = false
+    onForeground()
+   }
+  }
+  job.start()
  }
  fun cancel() { operation?.cancel() }
  fun connect(id: String, hash: String) = launchOperation(Words.get(R.string.starting_telegram_sign_in)) {
@@ -290,10 +294,11 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  private fun updateStorageState() { _state.update { it.copy(workPath = app.storage.folder.root.absolutePath, fileAccess = app.storage.folder.hasAccess()) } }
  fun chooseWorkFolder(uri: Uri) = launchOperation(Words.get(R.string.setting_up_folder)) {
   val folder = app.storage.folder.fromTree(uri)
+  val changedFolder = folder != app.storage.root.canonicalFile
   tg.closeForStorageChange()
   app.storage.folder.save(folder)
   app.storage.folder.requireReady()
-  updateStorageState(); refreshDownloads(true)
+  updateStorageState(); refreshDownloads(selectAll = changedFolder)
   savedCredentials()?.let(tg::start)
  }
  fun clearCache() = launchOperation(Words.get(R.string.clearing_cache)) {
@@ -360,7 +365,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   if (files.isEmpty()) { notify(Words.get(R.string.select_at_least_one_attachment)); return }
   if (files.any { ArchiveNames.isArchive(it.name) }) { archiveTransfer(files, emptyList(), false, share); return }
   launchOperation(Words.get(R.string.preparing_download), transfer = true) {
-   if (!retryOnly) { app.storage.prepareDownloads(_state.value.clearBeforeDownload); refreshDownloads(true) }
+   if (!retryOnly) { app.storage.prepareDownloads(_state.value.clearBeforeDownload); refreshDownloads() }
    _state.update { it.copy(tab = AppTab.DOWNLOADS.ordinal, retry = files) }
    val saved = ConcurrentHashMap<String, Downloaded>()
    val completed = ConcurrentHashMap.newKeySet<String>()
@@ -379,31 +384,39 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
       val existing = app.storage.existing(a)
       if (existing != null) { saved[a.key] = existing; completed += a.key; return@withLock }
       val target = app.storage.beginDownload(a)
-      refreshDownloads(true)
+      refreshDownloads()
       _state.update { it.copy(activeDownloads = it.activeDownloads + (a.fileId to DownloadProgress(a.name, size = a.size))) }
       updateSummary()
       val source = tg.download(a)
-      saved[a.key] = app.storage.finishDownload(source, target)
+      saved[a.key] = finishDownload(source, target)
       completed += a.key
      } catch (e: CancellationException) { throw e }
      catch (e: Exception) { failures[a.key] = "${a.name}: ${e.message}" }
      finally {
       _state.update { it.copy(activeDownloads = it.activeDownloads - a.fileId) }
-      runCatching { refreshDownloads(true) }
+      runCatching { refreshDownloads() }
       updateSummary()
      }
     }
    }
-   refreshDownloads(true)
+   refreshDownloads()
    _state.update { it.copy(progress = Words.get(R.string.downloads_completed, completed.size, files.size), fraction = null,
     shareFiles = if (share && completed.size == files.size) files.map { a -> saved.getValue(a.key) } else emptyList()) }
    if (share && completed.size != files.size) notify(Words.get(R.string.sharing_could_not_start_because_some_files))
 
   }
  }
+ @Synchronized private fun finishDownload(source: File, target: DownloadTarget): Downloaded =
+  app.storage.finishDownload(source, target).also { file ->
+   _state.update { it.copy(downloadedSelection = it.downloadedSelection + file.path) }
+  }
  @Synchronized private fun refreshDownloads(selectAll: Boolean = false) {
   val files = app.storage.list()
-  _state.update { s -> s.copy(downloads = files, downloadedSelection = if (selectAll) files.map { it.path }.toSet() else s.downloadedSelection.intersect(files.map { it.path }.toSet())) }
+  val paths = files.map { it.path }.toSet()
+  _state.update { s ->
+   val selected = if (selectAll) paths else s.downloadedSelection.intersect(paths)
+   s.copy(downloads = files, downloadedSelection = selected)
+  }
  }
  fun refreshLocalFiles() = launchOperation(Words.get(R.string.reading_folder)) { refreshDownloads() }
  fun selectedDownloads() = _state.value.downloads.filter { it.path in _state.value.downloadedSelection }
@@ -434,7 +447,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
      failures += "$name: ${e.message}"
      if (!settings.keep) throw e // retained partial must not accumulate with the next download
     } finally {
-     refreshDownloads(true)
+     refreshDownloads()
      _state.update { it.copy(failures = failures.toList(), progress = Words.get(R.string.ftp_transfers_completed, completed.get(), total)) }
     }
    }
@@ -476,7 +489,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
           tg.stopStreaming(a, delete = uploaded && !settings.keep)
           if (target != null) {
            val available = tg.available(a, 0)
-           if (available.complete && available.file != null) app.storage.finishDownload(available.file, target)
+           if (available.complete && available.file != null) finishDownload(available.file, target)
           }
          } catch (e: Exception) {
           if (transferError != null) transferError.addSuppressed(e)
@@ -551,8 +564,8 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
       app.storage.beginArchiveDownload(if (needsName) part.copy(name = filename) else part, filename)
      } else app.storage.beginDownload(part)
      _state.update { it.copy(activeDownloads = it.activeDownloads + (part.fileId to DownloadProgress(part.name, size=part.size))) }
-     try { saved[part.key] = app.storage.finishDownload(tg.download(part), target) }
-     finally { _state.update { it.copy(activeDownloads = it.activeDownloads - part.fileId) }; refreshDownloads(true) }
+     try { saved[part.key] = finishDownload(tg.download(part), target) }
+     finally { _state.update { it.copy(activeDownloads = it.activeDownloads - part.fileId) }; refreshDownloads() }
     }
    } }
    return parts.map { saved.getValue(it.key) }
@@ -606,7 +619,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     _state.update { it.copy(remoteCleanup = remoteTouched.distinct()) }
    }
    throw e
-  } finally { refreshDownloads(true) }
+  } finally { refreshDownloads() }
  }
  private var pendingCleanup: Triple<FtpSettings, String, List<String>>? = null
  fun remoteCleanup(confirmed: Boolean) {

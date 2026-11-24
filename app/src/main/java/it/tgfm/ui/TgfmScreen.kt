@@ -605,7 +605,7 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
 
 @Composable private fun RuleEditor(vm: AppViewModel, rule: Rule, favorites: List<Channel>, activeChannelId: Long?, examples: List<Attachment>, onDismiss: () -> Unit, onConfirm: (Rule) -> Unit) {
  var title by rememberSaveable(rule.id) { mutableStateOf(rule.title) }
- var template by rememberSaveable(rule.id) { mutableStateOf(FilterEditing.nameOnly(rule.template)) }
+ var template by rememberSaveable(rule.id) { mutableStateOf(FilterEditing.nameOnly(rule.template, rule.extensions)) }
  var contains by rememberSaveable(rule.id) { mutableStateOf(rule.contains) }
  var extensions by rememberSaveable(rule.id) { mutableStateOf(rule.extensions.joinToString(", ")) }
  var mime by rememberSaveable(rule.id) { mutableStateOf(rule.mime) }
@@ -629,7 +629,7 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
    OutlinedTextField(title, { title = it }, modifier = Modifier.fillMaxWidth(), label = { Text(Words.get(R.string.rule_name)) }, singleLine = true)
    Row(verticalAlignment = Alignment.CenterVertically) { Switch(exclude, { exclude = it }); Text(if (exclude) Words.get(R.string.explicit_exclusion) else Words.get(R.string.inclusion)) }
    OutlinedTextField(if (template.contains("{data}")) template.substringBefore("{data}") else "", { prefix ->
-    template = FilterEditing.withDateRoot(template, prefix)
+    template = FilterEditing.withDateRoot(template, prefix, draft.extensions)
    }, modifier = Modifier.fillMaxWidth(), label = { Text(Words.get(R.string.exact_prefix_before_date)) }, placeholder = { Text("La_Gente_") }, supportingText = { Text(Words.get(R.string.include_the_final_separator_for_example_la)) })
    OutlinedTextField(template, { template = it }, modifier = Modifier.fillMaxWidth(), label = { Text(Words.get(R.string.filename_pattern_without_extension)) }, placeholder = { Text("pino_binio_{data}") })
    Text(Words.get(R.string.la_gente_data_matches_that_exact_name), style = MaterialTheme.typography.labelSmall)

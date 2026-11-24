@@ -161,7 +161,21 @@ class TelegramClient(private val context: Context) {
   validateAttachment(a)
   send(request("deleteFile", "file_id" to a.fileId))
   try {
-   val f = send(request("downloadFile", "file_id" to a.fileId, "priority" to 32, "offset" to 0, "limit" to 0, "synchronous" to true), 30 * 60 * 1000L)
+   val f = coroutineScope {
+    val transfer = async { send(request("downloadFile", "file_id" to a.fileId, "priority" to 32, "offset" to 0, "limit" to 0, "synchronous" to true), Long.MAX_VALUE) }
+    var lastBytes = 0L
+    var result: JSONObject?
+    do {
+     result = withTimeoutOrNull(180_000) { transfer.await() }
+     if (result == null && !transfer.isCompleted) {
+      val file = send(request("getFile", "file_id" to a.fileId), 15_000)
+      val bytes = file.getJSONObject("local").getLong("downloaded_size")
+      check(bytes > lastBytes || transfer.isCompleted) { Words.get(R.string.telegram_has_stopped_providing_new_data_retry) }
+      lastBytes = bytes
+     }
+    } while (result == null)
+    result
+   }
    val local = f.getJSONObject("local")
    check(local.optBoolean("is_downloading_completed")) { Words.get(R.string.download_interrupted_try_again) }
    return File(local.getString("path")).also { check(it.isFile) { Words.get(R.string.downloaded_file_unavailable) } }

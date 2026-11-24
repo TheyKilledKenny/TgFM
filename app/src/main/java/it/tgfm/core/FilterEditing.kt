@@ -2,16 +2,15 @@ package it.tgfm.core
 
 /** The model concerns the name only. File types are configured separately. */
 object FilterEditing {
- fun fileNameOnly(value: String): String =
-  if (Regex("(?:^|[_ -])[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{2,4}$").containsMatchIn(value)) value
-  else value.substringBeforeLast('.', value)
- fun nameOnly(value: String): String {
-  val suffix = value.substringAfterLast('.', "")
-  // A dotted numeric date or a placeholder is part of the name, not an extension.
-  return if (Regex("(?=[A-Za-z0-9+-]*[A-Za-z])[A-Za-z0-9+-]{1,16}").matches(suffix)) value.substringBeforeLast('.') else value
+ fun nameOnly(value: String, extensions: Set<String> = emptySet()): String {
+  val suffix = value.substringAfterLast('.', "").lowercase(java.util.Locale.ROOT)
+  if (suffix.isEmpty()) return value
+  val isExtension = extensions.any { it.trim().removePrefix(".").equals(suffix, ignoreCase = true) } ||
+   android.webkit.MimeTypeMap.getSingleton().hasExtension(suffix)
+  return if (isExtension) value.substringBeforeLast('.') else value
  }
- fun withDateRoot(currentTemplate: String, root: String): String {
-  val model = nameOnly(currentTemplate)
+ fun withDateRoot(currentTemplate: String, root: String, extensions: Set<String> = emptySet()): String {
+  val model = nameOnly(currentTemplate, extensions)
   val suffix = if (model.contains("{data}")) model.substringAfter("{data}") else ""
   return root + "{data}" + suffix
  }
