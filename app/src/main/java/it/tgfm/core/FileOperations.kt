@@ -9,12 +9,14 @@ import java.io.OutputStream
 import java.security.MessageDigest
 
 object FileNames {
- fun safe(name: String): String {
+ fun safe(name: String): String = safe(name, 180)
+ fun safe(name: String, maxBytes: Int): String {
   val clean = name.replace(Regex("[\\p{Cntrl}/\\\\:*?\"<>|]"), "_").trim().trim('.').ifBlank { "allegato" }
   val suffix = clean.substringAfterLast('.', "").takeIf { it.length in 1..12 }?.let { ".$it" }.orEmpty()
+  require(maxBytes >= suffix.toByteArray(Charsets.UTF_8).size && maxBytes > 0) { Words.get(R.string.keep_the_extension_and_enter_a_valid, suffix) }
   var stem = if (suffix.isEmpty()) clean else clean.dropLast(suffix.length)
   // Keep UTF-8 filenames comfortably below filesystem limits, including collision suffixes.
-  while ((stem + suffix).toByteArray(Charsets.UTF_8).size > 180) stem = stem.dropLast(1)
+  while ((stem + suffix).toByteArray(Charsets.UTF_8).size > maxBytes) stem = stem.dropLast(1)
   return (stem + suffix).ifBlank { "allegato" }
  }
  fun unique(name: String, exists: (String) -> Boolean): String {

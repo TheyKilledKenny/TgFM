@@ -22,6 +22,11 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import org.json.JSONObject
 
+class FtpOverwritePrompt(val path: String) {
+ val approved = CompletableDeferred<Unit>()
+}
+private class FtpOverwriteDeclined : CancellationException()
+
 data class UiState(
  val tab: Int = AppTab.SETTINGS.ordinal, val auth: String = "notStarted", val authState: JSONObject? = null, val connection: Int = R.string.offline,
  val rules: List<Rule> = emptyList(), val favorites: List<Channel> = emptyList(), val channels: List<Channel> = emptyList(), val channel: Channel? = null,
@@ -35,7 +40,7 @@ data class UiState(
  val workPath: String = "", val fileAccess: Boolean = false, val ftp: FtpSettings = FtpSettings(),
  val showCovers: Boolean = false,
  val archiveContents: Boolean = false, val archiveDefault: Boolean = false,
- val archiveRename: String? = null, val remoteCleanup: List<String> = emptyList(),
+ val ftpOverwrite: FtpOverwritePrompt? = null, val archiveRename: String? = null, val remoteCleanup: List<String> = emptyList(),
  val loginError: String = "",
  val shareFiles: List<Downloaded> = emptyList(), val ready: Boolean = false
 ) {
@@ -100,6 +105,13 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   catch(_: Exception) { return null }
   finally { coverSlots.release() }
  }
+ private val overwriteLock = Mutex()
+ private suspend fun confirmFtpOverwrite(path: String) = overwriteLock.withLock {
+  val prompt = FtpOverwritePrompt(path)
+  _state.update { it.copy(ftpOverwrite = prompt) }
+  try { prompt.approved.await() } finally { _state.update { it.copy(ftpOverwrite = null) } }
+ }
+ fun declineFtpOverwrite() { operation?.cancel(FtpOverwriteDeclined()) }
  private var renameReply: CompletableDeferred<String?>? = null
  fun answerArchiveName(name: String?) { renameReply?.complete(name) }
  fun archiveMode(contents: Boolean) { _state.update { it.copy(archiveContents = contents) } }
@@ -413,8 +425,10 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     else selected.associate { it.key to FileNames.unique(it.name) { name -> name in names }.also(names::add) }
    // Check the total required capacity before allowing retained files to run in parallel.
    if (!local && settings.keep) requireSpace(selected.filter { app.storage.existing(it) == null }.sumOf { it.size.coerceAtLeast(0) })
-   suspend fun report(name: String, task: suspend () -> Unit) {
-    try { task(); completed.incrementAndGet() }
+   // Servers may treat case variants as one path. Keep their existence checks and writes in order.
+   val destinationLocks = remoteNames.values.associate { it.lowercase() to Mutex() }
+   suspend fun report(name: String, destination: String, task: suspend () -> Unit) {
+    try { destinationLocks.getValue(destination.lowercase()).withLock { task() }; completed.incrementAndGet() }
     catch (e: CancellationException) { throw e }
     catch (e: Exception) {
      failures += "$name: ${e.message}"
@@ -428,14 +442,14 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     val source = File(file.path)
     check(source.canonicalFile.parentFile == app.storage.root.canonicalFile && source.isFile) { Words.get(R.string.file_outside_the_working_folder) }
     val modified = source.lastModified()
-    val sent = source.inputStream().use { input -> FtpUploader(settings).upload(name, { input.read(it) }) { sent ->
+    val sent = source.inputStream().use { input -> FtpUploader(settings).upload(name, { input.read(it) }, ::confirmFtpOverwrite) { sent ->
      _state.update { it.copy(progress = "FTP · ${file.originalName}: ${sizeLabel(sent)} / ${sizeLabel(file.size)}") }
     } }
     check(sent == file.size && source.length() == file.size && source.lastModified() == modified) { Words.get(R.string.the_local_file_changed_during_upload_and) }
     if (!settings.keep) app.storage.delete(listOf(file))
    }
    suspend fun attachment(a: Attachment) = fileLocks.getOrPut(a.fileId) { Mutex() }.withLock {
-    report(a.name) {
+    report(a.name, remoteNames.getValue(a.key)) {
      val existing = app.storage.existing(a)
      if (existing != null) localFile(existing, remoteNames.getValue(a.key))
      else {
@@ -449,7 +463,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
        started = true
        tg.startStreaming(a)
        GrowingFileReader({ offset -> tg.available(a, offset) }).use { reader ->
-        FtpUploader(settings).upload(remoteNames.getValue(a.key), reader::read) { sent ->
+        FtpUploader(settings).upload(remoteNames.getValue(a.key), reader::read, ::confirmFtpOverwrite) { sent ->
          _state.update { s -> val active = s.activeDownloads[a.fileId]
           s.copy(activeDownloads = if (active == null) s.activeDownloads else s.activeDownloads + (a.fileId to active.copy(uploaded = sent))) }
         }
@@ -475,9 +489,13 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
      }
     }
    }
+   suspend fun sendLocal(file: Downloaded) {
+    val name = remoteNames.getValue(file.path)
+    report(file.originalName, name) { localFile(file, name) }
+   }
    if (local) {
-    if (settings.keep) ParallelDownloads.run(downloaded) { file -> report(file.originalName) { localFile(file, remoteNames.getValue(file.path)) } }
-    else for (file in downloaded) report(file.originalName) { localFile(file, remoteNames.getValue(file.path)) }
+    if (settings.keep) ParallelDownloads.run(downloaded, ::sendLocal)
+    else for (file in downloaded) sendLocal(file)
    } else {
     if (settings.keep) ParallelDownloads.run(selected, ::attachment)
     else for (a in selected) attachment(a)
@@ -498,24 +516,28 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    val family = ArchiveNames.family(ArchiveNames.members(item).first().name)
    val raw = _state.value.attachments.flatMap(ArchiveNames::members).filter { ArchiveNames.family(it.name) == family }
    require((item.parts.isEmpty() && ArchiveNames.part(item.name) == null) || raw.map { it.name.lowercase() }.distinct().size == raw.size) { Words.get(R.string.several_archives_have_identically_named_parts_narrow) }
-   var parts = ArchiveNames.members(item)
-   val originals = parts
-   val needsName = ArchiveNames.isArchive(item.name) && parts.any { part ->
-    app.storage.existing(part) == null && File(app.storage.root, part.name).exists()
-   }
+   val parts = ArchiveNames.members(item)
+   val archive = ArchiveNames.isArchive(item.name)
+   val originalStem = item.name.substringBeforeLast('.')
+   val extension = item.name.substringAfterLast('.')
+   // Leave room for the longest volume suffix so every part retains the same local stem.
+   val nameBudget = 180 - (parts.maxOf { it.name.length } - item.name.length)
+   var localName = if (archive) FileNames.safe(item.name, nameBudget) else item.name
+   fun volumeName(part: Attachment, logicalName: String) =
+    logicalName.substringBeforeLast('.') + part.name.drop(originalStem.length)
+   fun occupied(part: Attachment, logicalName: String) = File(app.storage.root, volumeName(part, logicalName)).exists()
+   val needsName = archive && parts.any { app.storage.existing(it) == null && occupied(it, localName) }
    if (needsName) {
-    val originalStem = item.name.substringBeforeLast('.')
-    val extension = item.name.substringAfterLast('.')
-    fun renamed(name: String) = originals.map { it.copy(name = name.substringBeforeLast('.') + it.name.removePrefix(originalStem)) }
-    var suggestion = FileNames.unique(item.name) { candidate -> renamed(candidate).any { File(app.storage.root, it.name).exists() } }
+    // Allow room for the numeric suggestion as well as the volume suffix.
+    var suggestion = FileNames.unique(FileNames.safe(localName, nameBudget - 13)) { candidate -> parts.any { occupied(it, candidate) } }
     while(true) {
      val reply = CompletableDeferred<String?>()
      renameReply = reply
      _state.update { it.copy(archiveRename = suggestion) }
      val answer = try { reply.await() ?: throw CancellationException() } finally { renameReply = null; _state.update { it.copy(archiveRename = null) } }
-     if (answer != FileNames.safe(answer) || !answer.endsWith(".$extension", true)) { notify(Words.get(R.string.keep_the_extension_and_enter_a_valid, extension)); continue }
-     parts = renamed(answer)
-     if (parts.any { File(app.storage.root, it.name).exists() }) { suggestion = answer; notify(Words.get(R.string.name_already_in_use_choose_another_name)); continue }
+     if (answer != FileNames.safe(answer, nameBudget) || !answer.endsWith(".$extension", true)) { notify(Words.get(R.string.keep_the_extension_and_enter_a_valid, extension)); continue }
+     if (parts.any { occupied(it, answer) }) { suggestion = answer; notify(Words.get(R.string.name_already_in_use_choose_another_name)); continue }
+     localName = answer
      break
     }
    }
@@ -524,7 +546,10 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    ParallelDownloads.run(parts) { part -> fileLocks.getOrPut(part.fileId) { Mutex() }.withLock {
     val existing = if(needsName) null else app.storage.existing(part)
     if(existing != null) saved[part.key] = existing else {
-     val target = app.storage.beginDownload(part)
+     val target = if (archive) {
+      val filename = volumeName(part, localName)
+      app.storage.beginArchiveDownload(if (needsName) part.copy(name = filename) else part, filename)
+     } else app.storage.beginDownload(part)
      _state.update { it.copy(activeDownloads = it.activeDownloads + (part.fileId to DownloadProgress(part.name, size=part.size))) }
      try { saved[part.key] = app.storage.finishDownload(tg.download(part), target) }
      finally { _state.update { it.copy(activeDownloads = it.activeDownloads - part.fileId) }; refreshDownloads(true) }
@@ -542,8 +567,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
      while(true) {
       currentCoroutineContext().ensureActive()
       val entry = reader.next() ?: break
-      remoteTouched += entry.name
-      val sent = uploader.upload(entry.name, { reader.read(it) }) { bytes -> _state.update { it.copy(progress="FTP · ${entry.name}: ${sizeLabel(bytes)}") } }
+      val sent = uploader.upload(entry.name, { reader.read(it) }, ::confirmFtpOverwrite, { remoteTouched += entry.name }) { bytes -> _state.update { it.copy(progress="FTP · ${entry.name}: ${sizeLabel(bytes)}") } }
       check(entry.size < 0 || sent == entry.size) { Words.get(R.string.extracted_size_mismatch, entry.name) }
       count++
      }
@@ -551,8 +575,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     }
    } else for(file in files) {
     val name = File(file.path).name
-    remoteTouched += name
-    val sent = File(file.path).inputStream().use { input -> uploader.upload(name, { input.read(it) }) { bytes -> _state.update { it.copy(progress="FTP · $name: ${sizeLabel(bytes)}") } } }
+    val sent = File(file.path).inputStream().use { input -> uploader.upload(name, { input.read(it) }, ::confirmFtpOverwrite, { remoteTouched += name }) { bytes -> _state.update { it.copy(progress="FTP · $name: ${sizeLabel(bytes)}") } } }
     check(sent == file.size) { Words.get(R.string.ftp_size_mismatch, name) }
    }
    check(snapshots.all { (f,size,time) -> f.isFile && f.length()==size && f.lastModified()==time }) { Words.get(R.string.the_archive_changed_during_upload_and_was) }
@@ -563,8 +586,10 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    if(local) {
     val seen = mutableSetOf<String>()
     for(file in downloaded) {
+     if (file.path in seen) continue
      val volumes = if(ArchiveNames.isArchive(file.originalName)) ArchiveReader.volumes(File(file.path)) else listOf(File(file.path))
-     if(!seen.add(volumes.joinToString { it.path })) continue
+     check(volumes.any { it.path == file.path }) { Words.get(R.string.file_unavailable, file.originalName) }
+     seen.addAll(volumes.map { it.path })
      val files = volumes.map { f -> app.storage.list().first { it.path == f.path } }
      send(files)
     }
@@ -576,7 +601,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    if(share) _state.update { it.copy(shareFiles = allSaved) }
    _state.update { it.copy(tab = AppTab.DOWNLOADS.ordinal, progress = if(settings != null) Words.get(R.string.ftp_upload_complete) else Words.get(R.string.archives_and_files_saved)) }
   } catch(e: Exception) {
-   if(settings != null && remoteTouched.isNotEmpty()) {
+   if(e !is FtpOverwriteDeclined && settings != null && remoteTouched.isNotEmpty()) {
     pendingCleanup = Triple(settings, subpath, remoteTouched.distinct())
     _state.update { it.copy(remoteCleanup = remoteTouched.distinct()) }
    }

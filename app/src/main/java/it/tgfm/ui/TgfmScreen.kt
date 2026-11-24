@@ -545,6 +545,12 @@ import java.time.format.DateTimeFormatter
    text = { Text(Words.get(R.string.files_will_be_deleted_from_the_working)) },
    confirmButton = { TextButton(onClick = { vm.deleteDownloads(files); deleteFiles = null }, enabled = !s.busy) { Text(Words.get(R.string.delete_detail), color = MaterialTheme.colorScheme.error) } },
    dismissButton = { TextButton(onClick = { deleteFiles = null }) { Text(Words.get(R.string.cancel)) } }) }
+  s.ftpOverwrite?.let { prompt ->
+   AlertDialog(onDismissRequest = vm::declineFtpOverwrite, title = { Text(Words.get(R.string.ftp_file_exists)) },
+    text = { Text(prompt.path) },
+    confirmButton = { TextButton(onClick = { prompt.approved.complete(Unit) }) { Text(Words.get(R.string.overwrite)) } },
+    dismissButton = { TextButton(onClick = vm::declineFtpOverwrite) { Text(Words.get(R.string.cancel)) } })
+  }
   s.archiveRename?.let { suggested ->
    var name by remember(suggested) { mutableStateOf(suggested) }
    AlertDialog(onDismissRequest = { vm.answerArchiveName(null) }, title = { Text(Words.get(R.string.archive_already_exists)) },
@@ -561,7 +567,7 @@ import java.time.format.DateTimeFormatter
    "ftp-selection", "ftp-downloads" -> Words.get(R.string.send_files_to_ftp); "logout" -> Words.get(R.string.sign_out_of_telegram); "delete" -> Words.get(R.string.delete_rule); else -> Words.get(R.string.confirm_change)
   }) }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { Text(when(confirmAction) {
    "download", "share" -> (if (s.clearBeforeDownload) Words.get(R.string.files_previously_managed_by_tgfm_will_be) else Words.get(R.string.existing_copies_of_the_same_attachment_will)) + if (confirmAction == "share") Words.get(R.string.android_sharing_will_open_after_saving) else ""
-   "ftp-selection", "ftp-downloads" -> Words.get(R.string.files_with_the_same_name_are_overwritten) + if (ftpKeep) Words.get(R.string.local_files_will_be_kept) else Words.get(R.string.local_copies_will_be_deleted_after_ftp)
+   "ftp-selection", "ftp-downloads" -> Words.get(R.string.ftp_overwrite_confirmation) + if (ftpKeep) Words.get(R.string.local_files_will_be_kept) else Words.get(R.string.local_copies_will_be_deleted_after_ftp)
    "share-local" -> Words.get(R.string.keep_shared_archives_on_the_device_while)
    "cache" -> Words.get(R.string.deletes_temporary_tdlib_files_including_interrupted_transfers)
    "logout" -> Words.get(R.string.your_telegram_session_will_close_your_filters)

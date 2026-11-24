@@ -46,6 +46,12 @@ class Storage(private val context: Context) {
   reservations.clear()
   if (clearPrevious) clearDownloads()
  }
+ @Synchronized fun beginArchiveDownload(a: Attachment, localName: String): DownloadTarget {
+  val target = File(ready, localName)
+  check(!target.exists()) { Words.get(R.string.name_already_in_use_choose_another_name) }
+  reservations[a.key] = target.absolutePath
+  return DownloadTarget(a, target.absolutePath)
+ }
  /** Reserve a unique destination and discard its previous contents BEFORE network I/O. */
  @Synchronized fun beginDownload(a: Attachment): DownloadTarget {
   val previous = list().filter { it.originalName == a.name && it.path !in reservations.filterKeys { key -> key != a.key }.values }

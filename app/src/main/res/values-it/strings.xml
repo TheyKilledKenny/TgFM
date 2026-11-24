@@ -386,7 +386,10 @@
     <string name="files_previously_managed_by_tgfm_will_be">"I precedenti file gestiti da TgFM saranno eliminati prima del salvataggio."</string>
     <string name="existing_copies_of_the_same_attachment_will">"I file già disponibili saranno riutilizzati. Un omonimo sostituito sarà perso anche se il nuovo download fallisce."</string>
     <string name="android_sharing_will_open_after_saving">" Dopo il salvataggio si aprirà la condivisione Android."</string>
-    <string name="files_with_the_same_name_are_overwritten">"I file omonimi sul server vengono sovrascritti; un\'interruzione può lasciare un file remoto incompleto. "</string>
+    <string name="overwrite">"Sovrascrivere"</string>
+    <string name="ftp_file_exists">"Il file esiste già sul server"</string>
+    <string name="ftp_existence_unknown">"Impossibile stabilire se %1$s esiste sul server FTP (risposta %2$d)."</string>
+    <string name="ftp_overwrite_confirmation">"TgFM chiederà conferma prima di sovrascrivere un file sul server. Un invio interrotto può lasciare un file remoto incompleto. "</string>
     <string name="local_files_will_be_kept">"I file locali saranno conservati."</string>
     <string name="local_copies_will_be_deleted_after_ftp">"Dopo la conferma FTP le copie locali saranno eliminate. In caso di errore non saranno eliminate automaticamente."</string>
     <string name="keep_shared_archives_on_the_device_while">"Gli archivi condivisi come contenuto devono restare sul dispositivo finché le app destinatarie li utilizzano."</string>
