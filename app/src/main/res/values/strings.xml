@@ -221,6 +221,7 @@
     <string name="save">"Save"</string>
     <string name="share">"Share"</string>
     <string name="save_to_ftp">"Save to FTP"</string>
+    <string name="configure_destination_ftp_server">"Set up the destination FTP server in Settings first."</string>
     <string name="delete_selected">"Delete selected"</string>
     <string name="confirm_and_save">"Confirm and save"</string>
     <string name="back_to_examples">"Back to examples"</string>

@@ -221,6 +221,7 @@
     <string name="save">"Salva"</string>
     <string name="share">"Condividi"</string>
     <string name="save_to_ftp">"Salva su FTP"</string>
+    <string name="configure_destination_ftp_server">"È necessario configurare il server FTP di destinazione in Configura."</string>
     <string name="delete_selected">"Elimina selezionati"</string>
     <string name="confirm_and_save">"Conferma e salva"</string>
     <string name="back_to_examples">"Torna agli esempi"</string>

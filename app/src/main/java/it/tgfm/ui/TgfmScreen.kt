@@ -105,7 +105,15 @@ import java.time.format.DateTimeFormatter
   s.tab == AppTab.SETTINGS.ordinal -> when(settingsPage) { "account" -> "Telegram"; "favorites" -> Words.get(R.string.favorite_channels); "storage" -> Words.get(R.string.files_and_folder); else -> Words.get(R.string.settings) }
   else -> AppTab.entries[s.tab].label
  }
- val openFtp: (Boolean) -> Unit = { local -> ftpPath = ""; ftpKeep = s.ftp.keep; confirmTransfer(if (local) "ftp-downloads" else "ftp-selection", local) }
+ fun openFtp(local: Boolean) {
+  if (s.ftp.host.isBlank()) {
+   vm.notify(Words.get(R.string.configure_destination_ftp_server))
+   return
+  }
+  ftpPath = ""
+  ftpKeep = s.ftp.keep
+  confirmTransfer(if (local) "ftp-downloads" else "ftp-selection", local)
+ }
  MaterialTheme(typography = Typography(
   titleLarge = androidx.compose.ui.text.TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
   titleMedium = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
