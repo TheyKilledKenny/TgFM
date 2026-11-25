@@ -35,6 +35,7 @@ class TelegramClient(private val context: Context) {
  @Volatile private var clientId = 0
  private val _auth = MutableStateFlow(request("notStarted"))
  val auth = _auth.asStateFlow()
+ @Volatile private var sessionAccount = 0L
  private val _connection = MutableStateFlow(R.string.offline)
  val connection = _connection.asStateFlow()
  private val _files = MutableSharedFlow<JSONObject>(extraBufferCapacity = 64)
@@ -55,6 +56,7 @@ class TelegramClient(private val context: Context) {
   }
   System.loadLibrary("tdjsonjava") // fail visibly if ABI/library is missing
   JsonClient.execute(request("setLogVerbosityLevel", "new_verbosity_level" to 0).toString())
+  sessionAccount = 0L
   _auth.value = request("starting")
   clientId = JsonClient.createClientId()
   if (!receiving) {
@@ -72,6 +74,9 @@ class TelegramClient(private val context: Context) {
         val state = json.getJSONObject("authorization_state"); _auth.value = state
         if (state.optString("@type") == "authorizationStateWaitTdlibParameters") scope.launch { runCatching { parameters() }.onFailure { _errors.emit(it.message ?: Words.get(R.string.tdlib_error)) } }
         if (state.optString("@type") == "authorizationStateClosed") pending.values.forEach { it.completeExceptionally(TelegramException(401, Words.get(R.string.session_closed))) }
+       }
+       "updateOption" -> if (json.optString("name") == "my_id") {
+        json.getJSONObject("value").optLong("value").takeIf { it > 0 }?.let { sessionAccount = it }
        }
        "updateConnectionState" -> _connection.value = when (json.getJSONObject("state").optString("@type")) { "connectionStateReady" -> R.string.connected; "connectionStateUpdating" -> R.string.updating; "connectionStateWaitingForNetwork" -> R.string.no_internet_connection; else -> R.string.connecting_to_telegram }
        "updateFile" -> _files.tryEmit(json.getJSONObject("file"))
@@ -100,7 +105,7 @@ class TelegramClient(private val context: Context) {
    "files_directory" to File(folder.cache, "tdlib").apply { mkdirs() }.absolutePath,
    "database_encryption_key" to c.databaseKey, "use_file_database" to true, "use_chat_info_database" to true,
    "use_message_database" to true, "use_secret_chats" to false, "api_id" to c.apiId, "api_hash" to c.apiHash,
-   "system_language_code" to Words.locale.language, "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.3"))
+   "system_language_code" to Words.locale.language, "device_model" to android.os.Build.MODEL, "system_version" to android.os.Build.VERSION.RELEASE, "application_version" to "1.5.9"))
   configuredClientId = configuringClientId
   Unit
  }
@@ -116,6 +121,37 @@ class TelegramClient(private val context: Context) {
   } finally { pending.remove(id) }
  }
  private val reader = TelegramReader { send(it) }
+ suspend fun accountId(): Long {
+  sessionAccount.takeIf { it > 0 }?.let { return it }
+  val session = clientId
+  val option = send(request("getOption", "name" to "my_id")).optLong("value")
+  val account = if (option > 0) option else send(request("getMe")).getLong("id")
+  synchronized(this) {
+   check(session == clientId && account > 0) { Words.get(R.string.invalid_session_sign_in_to_telegram_again) }
+   sessionAccount = account
+  }
+  return account
+ }
+ suspend fun readHistory(chat: Long, gaps: List<HistoryRange>, head: HistoryPoint?, page: (HistoryRange, List<JSONObject>) -> Unit) {
+  if (gaps.isEmpty()) return
+  send(request("getChat", "chat_id" to chat))
+  send(request("openChat", "chat_id" to chat))
+  try {
+   for (gap in gaps.asReversed()) reader.readHistory(chat, gap, gap.end == head, page)
+  } finally {
+   withContext(NonCancellable) { runCatching { send(request("closeChat", "chat_id" to chat), 5000) } }
+  }
+ }
+
+ suspend fun resolveCached(a: Attachment): Attachment {
+  val slot = a.cachedSlot ?: return a
+  val message = send(request("getMessage", "chat_id" to a.chatId, "message_id" to a.messageId))
+  val files = AttachmentMapper.fromMessage(message)
+  val current = if (a.remoteUnique.isNotEmpty()) files.firstOrNull { it.remoteUnique == a.remoteUnique }
+   else files.getOrNull(slot)?.takeIf { it.category == a.category && it.size == a.size && it.name == a.name }
+  check(current != null) { Words.get(R.string.the_attachment_changed_or_is_no_longer) }
+  return a.copy(fileId = current.fileId)
+ }
  suspend fun channels(progress: (List<Channel>) -> Unit = {}) = reader.channels(progress)
  suspend fun attachments(chatId: Long, window: PostWindow, progress: (List<Attachment>) -> Unit) = reader.attachments(chatId, window, progress)
  suspend fun closeForStorageChange() {

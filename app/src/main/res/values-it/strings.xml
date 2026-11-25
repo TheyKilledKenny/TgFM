@@ -361,7 +361,7 @@
     <string name="grant_access">"Concedi accesso"</string>
     <string name="not_now">"Non ora"</string>
     <string name="remove_from_favorites">"Rimuovere dai preferiti?"</string>
-    <string name="removing_also_deletes_its_filters_other_channels">"Rimuovendo %1$s saranno eliminati anche i suoi %2$s filtri. Gli altri canali e filtri resteranno invariati."</string>
+    <string name="removing_also_deletes_its_filters_other_channels">"Rimuovendo %1$s saranno eliminati anche i suoi %2$s filtri. Verrà svuotata anche la sua cache degli allegati. I file scaricati resteranno sul dispositivo."</string>
     <string name="remove">"Rimuovi"</string>
     <string name="cancel">"Annulla"</string>
     <plurals name="delete_selected_local_files">
@@ -469,4 +469,17 @@
     <string name="original_archive">Archivio originale</string>
     <string name="archive_files">Contenuto archivio</string>
     <string name="no_image_preview">Anteprima immagine non disponibile</string>
+    <string name="cache_attachment_list">"Memorizza elenco allegati"</string>
+    <string name="refresh_telegram">"Aggiorna da Telegram"</string>
+    <string name="clear_attachment_cache">"Svuota cache"</string>
+    <string name="cache_clear_question">"Svuotare la cache degli allegati di %1$s? I file scaricati resteranno sul dispositivo."</string>
+    <string name="cache_save_first">"Salva le impostazioni prima di aggiornare."</string>
+    <string name="cache_partial">"Lettura interrotta. Elenco parziale."</string>
+    <string name="cache_offline_new">"Offline. Potrebbero esserci nuovi post."</string>
+    <string name="cache_clear_failed">"Impossibile svuotare la cache degli allegati."</string>
+    <string name="attachment_cache_cleared">"Cache degli allegati svuotata."</string>
+    <string name="attachment_cache_updated">"Cache degli allegati aggiornata."</string>
+    <string name="no_attachments_in_period">"Nessun allegato nel periodo."</string>
+    <string name="period_partially_read">"Periodo letto solo in parte."</string>
+    <string name="period_not_read">"Periodo ancora da leggere."</string>
 </resources>

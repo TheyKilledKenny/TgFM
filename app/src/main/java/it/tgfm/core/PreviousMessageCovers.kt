@@ -1,7 +1,7 @@
 package it.tgfm.core
 
 /** Preview metadata only: never part of the selected attachment's download/export. */
-data class CoverImage(val fileId: Int = 0, val miniature: String = "", val caption: String = "", val messageId: Long? = null)
+data class CoverImage(val fileId: Int = 0, val miniature: String = "", val caption: String = "", val messageId: Long? = null, val remoteId: String = "")
 
 /** History arrives newest first, with overlapping pages and possible text-only messages. */
 class PreviousMessageCovers {

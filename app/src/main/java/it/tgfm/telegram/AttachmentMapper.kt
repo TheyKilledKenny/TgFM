@@ -15,6 +15,7 @@ object AttachmentMapper {
  }
  private fun preview(file: JSONObject?, owner: JSONObject) = CoverImage(
   fileId = file?.takeIf { maxOf(it.optLong("size"), it.optLong("expected_size")) <= 256 * 1024 }?.optInt("id") ?: 0,
+  remoteId = file?.takeIf { maxOf(it.optLong("size"), it.optLong("expected_size")) <= 256 * 1024 }?.optJSONObject("remote")?.optString("id").orEmpty(),
   miniature = owner.optJSONObject("minithumbnail")?.optString("data").orEmpty()
  )
  fun chatAvatar(chat: JSONObject): CoverImage? = chat.optJSONObject("photo")?.let { preview(it.optJSONObject("small"), it) }
@@ -44,7 +45,7 @@ object AttachmentMapper {
     category == Category.IMAGE -> photoPreview(owner)
     else -> preview(owner.optJSONObject("thumbnail")?.optJSONObject("file"), owner)
    }
-   result[id] = Attachment(message.optLong("chat_id"), message.optLong("id"), id, name, mime, file.optLong("size").takeIf { it > 0 } ?: file.optLong("expected_size"), message.optLong("date"), caption, category, imagePreview = imagePreview)
+   result[id] = Attachment(message.optLong("chat_id"), message.optLong("id"), id, name, mime, file.optLong("size").takeIf { it > 0 } ?: file.optLong("expected_size"), message.optLong("date"), caption, category, imagePreview = imagePreview, remoteUnique = file.optJSONObject("remote")?.optString("unique_id").orEmpty())
   }
   fun visit(obj: JSONObject) {
    when (obj.optString("@type")) {

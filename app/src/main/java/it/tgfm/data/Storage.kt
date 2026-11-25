@@ -55,7 +55,7 @@ class Storage(private val context: Context) {
  /** Reserve a unique destination and discard its previous contents BEFORE network I/O. */
  @Synchronized fun beginDownload(a: Attachment): DownloadTarget {
   val previous = list().filter { it.originalName == a.name && it.path !in reservations.filterKeys { key -> key != a.key }.values }
-   .sortedByDescending { it.sourceKey == a.key }.firstOrNull()
+   .sortedByDescending { a.matchesSource(it.sourceKey) }.firstOrNull()
   val target = reservations[a.key]?.let(::File) ?: previous?.let { File(it.path) }
    ?: File(ready, FileNames.unique(a.name) { name -> File(ready, name).let { it.exists() || it.absolutePath in reservations.values } })
   check(!target.exists() || target.delete()) { Words.get(R.string.could_not_overwrite, a.name) }
@@ -84,7 +84,7 @@ class Storage(private val context: Context) {
   }
   persist(list())
  }
- @Synchronized fun existing(a: Attachment): Downloaded? = list().firstOrNull { it.sourceKey == a.key && (a.size <= 0 || it.size == a.size) }
+ @Synchronized fun existing(a: Attachment): Downloaded? = list().firstOrNull { a.matchesSource(it.sourceKey) && (a.size <= 0 || it.size == a.size) }
  fun clearCache() { deleteTree(folder.cache); folder.requireReady() }
  private fun deleteTree(file: File) {
   if (!file.exists()) return

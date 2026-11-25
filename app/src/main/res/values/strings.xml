@@ -361,7 +361,7 @@
     <string name="grant_access">"Grant access"</string>
     <string name="not_now">"Not now"</string>
     <string name="remove_from_favorites">"Remove from favorites?"</string>
-    <string name="removing_also_deletes_its_filters_other_channels">"Removing %1$s also deletes its filters (%2$s). Other channels and filters are unaffected."</string>
+    <string name="removing_also_deletes_its_filters_other_channels">"Removing %1$s also deletes its filters (%2$s). Its attachment cache is also cleared. Downloaded files are kept."</string>
     <string name="remove">"Remove"</string>
     <string name="cancel">"Cancel"</string>
     <plurals name="delete_selected_local_files">
@@ -469,4 +469,17 @@
     <string name="original_archive">Original archive</string>
     <string name="archive_files">Archive contents</string>
     <string name="no_image_preview">Image preview unavailable</string>
+    <string name="cache_attachment_list">"Cache attachment list"</string>
+    <string name="refresh_telegram">"Refresh from Telegram"</string>
+    <string name="clear_attachment_cache">"Clear cache"</string>
+    <string name="cache_clear_question">"Clear the attachment list for %1$s? Downloaded files will be kept."</string>
+    <string name="cache_save_first">"Save these settings before refreshing."</string>
+    <string name="cache_partial">"Read interrupted. Partial list."</string>
+    <string name="cache_offline_new">"Offline. There may be new posts."</string>
+    <string name="cache_clear_failed">"Could not clear the attachment cache."</string>
+    <string name="attachment_cache_cleared">"Attachment cache cleared."</string>
+    <string name="attachment_cache_updated">"Attachment cache updated."</string>
+    <string name="no_attachments_in_period">"No attachments in this period."</string>
+    <string name="period_partially_read">"Period partly read."</string>
+    <string name="period_not_read">"Period not read yet."</string>
 </resources>

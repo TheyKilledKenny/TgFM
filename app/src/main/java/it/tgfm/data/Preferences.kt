@@ -53,11 +53,11 @@ class Preferences(context: Context, private val dataStore: androidx.datastore.co
   val period = listOf(PostPeriodMode.TODAY, PostPeriodMode.WEEK, PostPeriodMode.ALL)
    .firstOrNull { it.name == json.optString("initial_period") } ?: PostPeriodMode.TODAY
   val archive = if (json.isNull("archive_contents")) null else json.getBoolean("archive_contents")
-  return Channel(json.getLong("id"), json.getString("title"), ChannelProfile(json.optBoolean("covers"), period, archive))
+  return Channel(json.getLong("id"), json.getString("title"), ChannelProfile(json.optBoolean("covers"), period, archive, json.optBoolean("cache_attachments")))
  }
  private fun favoriteJson(channel: Channel) = channelJson(channel)
   .put("covers", channel.profile.covers).put("initial_period", channel.profile.initialPeriod.name)
-  .put("archive_contents", channel.profile.archiveContents)
+  .put("archive_contents", channel.profile.archiveContents).put("cache_attachments", channel.profile.cacheAttachments)
  suspend fun saveProfile(id: Long, profile: ChannelProfile) = editConfiguration { config ->
   config.copy(favorites = config.favorites.map { if (it.id == id) it.copy(profile = profile) else it })
  }

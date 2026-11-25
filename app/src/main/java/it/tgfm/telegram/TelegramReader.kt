@@ -32,46 +32,57 @@ class TelegramReader(private val send: suspend (JSONObject) -> JSONObject) {
  }
  private fun sorted(channels: Collection<Channel>) = channels.sortedBy { it.title.lowercase(Locale.ROOT) }
 
+ /** Deliver a proven slice and its exclusive resume boundary together. */
+ suspend fun readHistory(chatId: Long, span: HistoryRange, fromHead: Boolean = false, page: (HistoryRange, List<JSONObject>) -> Unit) {
+  var upper = span.end
+  suspend fun history(from: Long): List<JSONObject> {
+   val array = send(request("getChatHistory", "chat_id" to chatId, "from_message_id" to from,
+    "offset" to 0, "limit" to 100, "only_local" to false)).getJSONArray("messages")
+   return (0 until array.length()).map(array::getJSONObject)
+  }
+  suspend fun atDate(date: Long): List<JSONObject> = try {
+   listOf(send(request("getChatMessageByDate", "chat_id" to chatId, "date" to date)))
+  } catch (e: TelegramException) { if (e.code == 404) emptyList() else throw e }
+  while (upper > span.start) {
+   currentCoroutineContext().ensureActive()
+   var messages = when {
+    upper.id != 0L -> history(upper.id)
+    fromHead && upper == span.end -> {
+     val latest = history(0)
+     if (latest.isNotEmpty() && latest.last().getLong("date") >= upper.date) atDate(upper.date - 1) else latest
+    }
+    else -> atDate(upper.date - 1)
+   }
+   if (upper.id != 0L && messages.size == 1 && messages.first().getLong("id") == upper.id) {
+    // TDLib may repeat just the inclusive cursor. Probe the preceding server ID;
+    // an empty reply, rather than the repeated cursor, establishes end of history.
+    val preceding = ((upper.id - 1) shr 20 shl 20).coerceAtLeast(1)
+    messages = history(preceding)
+   }
+   val older = messages.filter { HistoryPoint(it.getLong("date"), it.getLong("id")) < upper }
+   check(messages.isEmpty() || older.isNotEmpty()) { it.tgfm.Words.get(it.tgfm.R.string.cache_partial) }
+   val oldest = older.lastOrNull()?.let { HistoryPoint(it.getLong("date"), it.getLong("id")) }
+   val lower = if (oldest == null || oldest < span.start) span.start else oldest
+   val examined = HistoryRange(lower, upper)
+   page(examined, older.filter { HistoryPoint(it.getLong("date"), it.getLong("id")) in examined })
+   upper = lower
+  }
+ }
  suspend fun attachments(chatId: Long, window: PostWindow, progress: (List<Attachment>) -> Unit): List<Attachment> {
   val result = linkedMapOf<String, Attachment>()
-  var cursor = 0L
   val covers = PreviousMessageCovers()
-  fun accept(message: JSONObject, include: Boolean) {
-   val files = AttachmentMapper.fromMessage(message)
-   covers.accept(chatId, message.getLong("id"), files, AttachmentMapper.coverFromMessage(message)).forEach { decorated ->
-    if(decorated.key in result) result[decorated.key] = decorated
-   }
-   if(include) files.forEach { if(it.key !in result) result[it.key] = it }
-  }
   send(request("getChat", "chat_id" to chatId))
-  if (window.endExclusive != null) {
-   // Jump on Telegram to the last post in the requested period instead of walking newer history.
-   val anchor = try { send(request("getChatMessageByDate", "chat_id" to chatId, "date" to window.endExclusive - 1)) }
-   catch (e: TelegramException) {
-    if (e.code != 404) throw e
-    progress(emptyList()); return emptyList()
+  val start = HistoryPoint(window.start ?: 0L)
+  val end = HistoryPoint(window.endExclusive ?: (java.time.Instant.now().epochSecond + 1))
+  if (start < end) readHistory(chatId, HistoryRange(start,end), fromHead = window.endExclusive == null) { _, messages ->
+   for (message in messages) {
+    val files = AttachmentMapper.fromMessage(message)
+    covers.accept(chatId, message.getLong("id"), files, AttachmentMapper.coverFromMessage(message)).forEach {
+     result[it.key] = it
+    }
+    files.forEach { result[it.key] = it }
    }
-   if (window.isBefore(anchor.getLong("date"))) { progress(emptyList()); return emptyList() }
-   cursor = anchor.getLong("id")
-   if (window.contains(anchor.getLong("date"))) accept(anchor, true)
    progress(result.values.toList())
-  }
-  while (true) {
-   currentCoroutineContext().ensureActive()
-   val messages = send(request("getChatHistory", "chat_id" to chatId, "from_message_id" to cursor, "offset" to 0, "limit" to 100, "only_local" to false)).getJSONArray("messages")
-   var reachedStart = false
-   for (i in 0 until messages.length()) {
-    val message = messages.getJSONObject(i)
-    val date = message.getLong("date")
-    if (window.isBefore(date)) { accept(message, false); reachedStart = true; break }
-    if (window.contains(date)) accept(message, true)
-   }
-   // Publish each received page before another cancellable request.
-   progress(result.values.toList())
-   if (reachedStart || messages.length() == 0) break
-   val next = messages.getJSONObject(messages.length() - 1).getLong("id")
-   if (next == cursor) break
-   cursor = next
   }
   return result.values.toList()
  }

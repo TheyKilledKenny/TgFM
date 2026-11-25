@@ -26,8 +26,8 @@ import kotlinx.coroutines.withContext
 /** Only composed (visible) previews are requested; no attachment is selected or saved. */
 @Composable fun CoverThumbnail(cover: CoverImage, vm: AppViewModel, modifier: Modifier = Modifier,
  description: String? = Words.get(R.string.cover_from_previous_message), scale: ContentScale = ContentScale.Fit,
- localPath: String? = null, fallback: @Composable () -> Unit = {}) = key(cover.fileId, cover.miniature, localPath) {
- val preview by produceState<ImageBitmap?>(null, cover.fileId, cover.miniature) {
+ localPath: String? = null, fallback: @Composable () -> Unit = {}) = key(cover, localPath) {
+ val preview by produceState<ImageBitmap?>(null, cover) {
   value = withContext(Dispatchers.Default) {
    runCatching {
     if(cover.miniature.isBlank() || cover.miniature.length > 512 * 1024) null else {
@@ -46,9 +46,9 @@ import kotlinx.coroutines.withContext
    }
    if (saved != null) { value = saved; return@produceState }
   }
-  if(cover.fileId != 0) {
+  if(cover.fileId != 0 || cover.remoteId.isNotEmpty()) {
    val bitmap = withContext(Dispatchers.IO) {
-    val file = vm.coverFile(cover.fileId)
+    val file = vm.coverFile(cover)
     if(file == null) null else runCatching { decodePreview(file.readBytes()) }.getOrNull()
    }
    if(bitmap != null) value = bitmap

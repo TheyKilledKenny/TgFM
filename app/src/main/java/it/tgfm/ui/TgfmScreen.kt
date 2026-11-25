@@ -410,14 +410,14 @@ import java.time.format.DateTimeFormatter
           s.favorites.forEach { favorite -> DropdownMenuItem(leadingIcon = { ChannelAvatar(favorite, vm) }, text = { Text(favorite.title) }, onClick = { vm.chooseChannel(favorite); selectedChannelMenu = false }) }
          }
         }
-        if (s.connection !in setOf(R.string.connected, R.string.updating)) Text(Words.get(R.string.previously_read_attachments_are_available, Words.get(s.connection)), style = MaterialTheme.typography.labelSmall)
+        if (s.channel?.profile?.cacheAttachments != true && s.connection !in setOf(R.string.connected, R.string.updating)) Text(Words.get(R.string.previously_read_attachments_are_available, Words.get(s.connection)), style = MaterialTheme.typography.labelSmall)
        }
        item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) }
        item { PostPeriodSelector(s.postPeriod, vm::postPeriod, enabled = !s.busy) {
         Button(onClick = vm::scan, enabled = !s.busy && s.auth == "authorizationStateReady" && s.channel != null && s.postPeriod.error() == null) { Text(Words.get(R.string.read)) }
        } }
        val scanned = s.scannedPeriod
-       if (scanned != null) item {
+       if (scanned != null && s.channel?.profile?.cacheAttachments != true) item {
         Text("${if (s.scanComplete) Words.get(R.string.scan_complete) else Words.get(R.string.partial_scan)} · ${scanned.first.description(scanned.second)}", style = MaterialTheme.typography.labelSmall)
        }
        item { HorizontalDivider(Modifier.padding(vertical = 6.dp)) }
@@ -438,7 +438,14 @@ import java.time.format.DateTimeFormatter
         val allSelected = s.attachments.isNotEmpty() && s.selected.size == s.attachments.size
         TextButton(onClick = { vm.selectAll(false, !allSelected) }, enabled = !s.busy && s.attachments.isNotEmpty()) { Text(if (allSelected) Words.get(R.string.deselect_all) else Words.get(R.string.select_all)) }
        } }
-       if (selectionFiles.isEmpty()) item { Text(when {
+       if (selectionFiles.isEmpty() && !s.previewPending && s.postPeriod.error() == null) item { Text(when {
+        s.attachments.isEmpty() && s.channel?.profile?.cacheAttachments == true -> Words.get(when {
+         s.scanComplete -> R.string.no_attachments_in_period
+         s.scannedPeriod != null -> R.string.period_partially_read
+         else -> R.string.period_not_read
+        })
+        s.attachments.isEmpty() && s.scanComplete -> Words.get(R.string.no_attachments_available)
+        s.attachments.isEmpty() && s.scannedPeriod != null && !s.busy -> Words.get(R.string.cache_partial)
         s.attachments.isEmpty() -> Words.get(R.string.no_attachments_read_yet)
         selectionQuery.isNotBlank() -> Words.get(R.string.no_files_in_this_view_change_the)
         s.attachmentView == AttachmentView.SELECTED -> Words.get(R.string.no_files_selected_choose_a_different_view)
@@ -447,7 +454,7 @@ import java.time.format.DateTimeFormatter
        items(selectionFiles, key = { it.key }) { a ->
         val match = FilterEngine.classify(a, s.activeRules)
         val selected = a.key in s.selected
-        val cover = a.cover?.takeIf { s.showCovers && (it.fileId != 0 || it.miniature.isNotBlank()) }
+        val cover = a.cover?.takeIf { s.showCovers && (it.fileId != 0 || it.remoteId.isNotEmpty() || it.miniature.isNotBlank()) }
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
          .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = .055f) else Color.Transparent)
          .testTag("attachment:${a.key}")) {
@@ -517,7 +524,7 @@ import java.time.format.DateTimeFormatter
     Text(FilterEngine.classify(a, s.activeRules).label)
     a.imagePreview?.let { preview ->
      CoverThumbnail(preview, vm, Modifier.fillMaxWidth().height(180.dp), description = a.name,
-      localPath = s.downloads.firstOrNull { it.sourceKey == a.key }?.path,
+      localPath = s.downloads.firstOrNull { a.matchesSource(it.sourceKey) }?.path,
       fallback = { Text(Words.get(R.string.no_image_preview), style = MaterialTheme.typography.bodySmall) })
     }
     if(s.showCovers) a.cover?.let { cover ->
@@ -745,6 +752,35 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
  var covers by rememberSaveable(channel.id) { mutableStateOf(channel.profile.covers) }
  var period by rememberSaveable(channel.id) { mutableStateOf(channel.profile.initialPeriod) }
  var contents by rememberSaveable(channel.id) { mutableStateOf(channel.profile.archiveContents) }
+ var cache by rememberSaveable(channel.id) { mutableStateOf(channel.profile.cacheAttachments) }
+ val draft = ChannelProfile(covers, period, contents, cache)
+ val state by vm.state.collectAsStateWithLifecycle()
+ val options by produceState<Pair<Boolean, PostPeriod>?>(null, channel.id, state.busy, state.auth) {
+  if (!state.busy) {
+   try { value = vm.cacheOptions(channel) }
+   catch (e: kotlinx.coroutines.CancellationException) { throw e }
+   catch (e: Exception) { vm.notify(e.localizedMessage ?: Words.get(R.string.operation_failed)) }
+  }
+ }
+ var refreshing by rememberSaveable(channel.id) { mutableStateOf(false) }
+ var clearing by rememberSaveable(channel.id) { mutableStateOf(false) }
+ if (refreshing) {
+  var chosen by remember { mutableStateOf(options?.second ?: PostPeriod(period)) }
+  AlertDialog(onDismissRequest = { refreshing = false }, title = { Text(Words.get(R.string.refresh_telegram)) },
+   text = { PostPeriodSelector(chosen, { chosen = it }, true) },
+   confirmButton = { TextButton(enabled = chosen.error() == null, onClick = {
+    onDismiss(); vm.refreshFromTelegram(channel, chosen)
+   }) { Text(Words.get(R.string.refresh_telegram)) } },
+   dismissButton = { TextButton(onClick = { refreshing = false }) { Text(Words.get(R.string.cancel)) } })
+  return
+ }
+ if (clearing) {
+  AlertDialog(onDismissRequest = { clearing = false }, title = { Text(Words.get(R.string.clear_attachment_cache)) },
+   text = { Text(Words.get(R.string.cache_clear_question, channel.title)) },
+   confirmButton = { TextButton(onClick = { clearing = false; vm.clearAttachmentCache(channel) }) { Text(Words.get(R.string.confirm)) } },
+   dismissButton = { TextButton(onClick = { clearing = false }) { Text(Words.get(R.string.cancel)) } })
+  return
+ }
  AlertDialog(onDismissRequest = onDismiss, title = { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { ChannelAvatar(channel, vm); Text(channel.title, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
   text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
    Row(Modifier.fillMaxWidth().toggleable(value = covers, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = { covers = it }),
@@ -763,8 +799,18 @@ private fun ruleSummary(r: Rule) = listOfNotNull(r.template.takeIf { it.isNotBla
      DropdownMenuItem(text = { Text(Words.get(label)) }, onClick = { contents = value; close() })
     }
    }
+   Row(Modifier.fillMaxWidth().toggleable(value = cache, role = androidx.compose.ui.semantics.Role.Switch,
+    onValueChange = { cache = it }), verticalAlignment = Alignment.CenterVertically) {
+    Text(Words.get(R.string.cache_attachment_list), Modifier.weight(1f))
+    Switch(cache, onCheckedChange = null)
+   }
+   TextButton(enabled = !state.busy && cache && draft == channel.profile && options != null,
+    onClick = { refreshing = true }) { Text(Words.get(R.string.refresh_telegram)) }
+   if (cache && draft != channel.profile) Text(Words.get(R.string.cache_save_first), style = MaterialTheme.typography.bodySmall)
+   TextButton(enabled = !state.busy && options?.first == true,
+    onClick = { clearing = true }) { Text(Words.get(R.string.clear_attachment_cache)) }
   } },
-  confirmButton = { TextButton(onClick = { onSave(ChannelProfile(covers, period, contents)) }) { Text(Words.get(R.string.save)) } },
+  confirmButton = { TextButton(enabled = !state.busy, onClick = { onSave(draft) }) { Text(Words.get(R.string.save)) } },
   dismissButton = { TextButton(onClick = onDismiss) { Text(Words.get(R.string.cancel)) } })
 }
 

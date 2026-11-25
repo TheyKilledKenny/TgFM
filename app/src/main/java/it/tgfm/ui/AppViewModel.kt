@@ -32,7 +32,8 @@ data class UiState(
  val rules: List<Rule> = emptyList(), val favorites: List<Channel> = emptyList(), val channels: List<Channel> = emptyList(), val channel: Channel? = null,
  val allAttachments: List<Attachment> = emptyList(),
  val attachments: List<Attachment> = emptyList(), val selected: Set<String> = emptySet(), val attachmentView: AttachmentView = AttachmentView.ALL, val clearBeforeDownload: Boolean = false,
- val postPeriod: PostPeriod = PostPeriod(), val scannedPeriod: Pair<PostPeriod, java.time.LocalDate>? = null, val scanComplete: Boolean = false,
+ val postPeriod: PostPeriod = PostPeriod(), val scannedPeriod: Pair<PostPeriod, java.time.LocalDate>? = null, val scanComplete: Boolean = false, val cachedListing: Boolean = false,
+ val previewPending: Boolean = false, val restoreReadPeriod: Boolean = false,
  val downloads: List<Downloaded> = emptyList(), val downloadedSelection: Set<String> = emptySet(),
  val busy: Boolean = false, val progress: String = "", val fraction: Float? = null,
  val message: String = "", val failures: List<String> = emptyList(), val retry: List<Attachment> = emptyList(),
@@ -53,27 +54,33 @@ data class UiState(
   }
   return choices.distinct().singleOrNull() ?: archiveDefault
  }
- fun withFiles(files: List<Attachment>, covers: Boolean, applyFilters: Boolean): UiState {
+ fun resetListing(): UiState = copy(allAttachments = emptyList(), attachments = emptyList(), selected = emptySet(),
+  scannedPeriod = null, scanComplete = false, cachedListing = false, previewPending = channel?.profile?.cacheAttachments == true, restoreReadPeriod = false)
+ fun choosePeriod(value: PostPeriod): UiState {
+  if (value == postPeriod) return if (restoreReadPeriod) copy(restoreReadPeriod = false) else this
+  val next = copy(postPeriod = value)
+  return if (channel?.profile?.cacheAttachments == true) next.resetListing() else next
+ }
+ fun withFiles(files: List<Attachment>, covers: Boolean, applyFilters: Boolean, keepExistingSelection: Boolean = false): UiState {
   val usedPhotos = if (covers) files.mapNotNull { file ->
    file.cover?.messageId?.let { file.chatId to it }
   }.toHashSet() else emptySet()
   val eligible = if (usedPhotos.isEmpty()) files else files.filterNot {
    it.category == Category.IMAGE && (it.chatId to it.messageId) in usedPhotos
   }
+  val existing = if (keepExistingSelection) attachments.mapTo(hashSetOf()) { it.key } else emptySet()
   val selection = eligible.filter {
-   if (applyFilters) FilterEngine.classify(it, activeRules) == Match.CERTAIN else it.key in selected
+   if (applyFilters && it.key !in existing) FilterEngine.classify(it, activeRules) == Match.CERTAIN else it.key in selected
   }.mapTo(mutableSetOf()) { it.key }
   return copy(allAttachments = files, attachments = eligible, selected = selection, showCovers = covers)
  }
  fun withConfiguration(config: ChannelConfiguration): UiState {
   val changedChannel = channel?.id != config.channel?.id
   val profile = config.channel?.profile ?: ChannelProfile()
-  val base = copy(favorites = config.favorites, channel = config.channel, rules = config.rules,
-   postPeriod = if (changedChannel || profile.initialPeriod != channel?.profile?.initialPeriod) PostPeriod(profile.initialPeriod) else postPeriod,
-   allAttachments = if (changedChannel) emptyList() else allAttachments,
-   attachments = if (changedChannel) emptyList() else attachments,
-   selected = if (changedChannel) emptySet() else selected,
-   scannedPeriod = if (changedChannel) null else scannedPeriod, scanComplete = if (changedChannel) false else scanComplete)
+  val period = if (changedChannel || profile.initialPeriod != channel?.profile?.initialPeriod) PostPeriod(profile.initialPeriod) else postPeriod
+  val configured = copy(favorites = config.favorites, channel = config.channel, rules = config.rules, postPeriod = period)
+  val base = if (changedChannel || profile.cacheAttachments != (channel?.profile?.cacheAttachments == true) ||
+   (profile.cacheAttachments && period != postPeriod)) configured.resetListing().copy(restoreReadPeriod = changedChannel && profile.cacheAttachments) else configured
   val rulesChanged = activeRules != base.activeRules
   return if (changedChannel || rulesChanged || showCovers != profile.covers)
    base.withFiles(base.allAttachments, profile.covers, applyFilters = rulesChanged) else base
@@ -88,6 +95,8 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  private val fileLocks = ConcurrentHashMap<Int, Mutex>()
  private var operation: Job? = null
  @Volatile private var foregroundRecheckPending = false
+ private val previewLock = Mutex()
+ private var foregroundDay = java.time.LocalDate.now()
  private val coverSlots = kotlinx.coroutines.sync.Semaphore(2)
  fun saveProfile(id: Long, profile: ChannelProfile) = launchOperation(Words.get(R.string.saving_channel)) {
   applyConfiguration(app.preferences.saveProfile(id, profile))
@@ -98,9 +107,12 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    it.tgfm.telegram.AttachmentMapper.chatAvatar(tg.send(request("getChat", "chat_id" to id)))
   } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
  }
- suspend fun coverFile(id: Int): File? {
+ suspend fun coverFile(preview: CoverImage): File? {
   coverSlots.acquire()
-  try { return if(_state.value.auth == "authorizationStateReady") tg.cover(id) else null }
+  try { return if(_state.value.auth == "authorizationStateReady") {
+   val id = if (preview.fileId != 0) preview.fileId else tg.send(request("getRemoteFile", "remote_file_id" to preview.remoteId)).getInt("id")
+   tg.cover(id)
+  } else null }
   catch(e: CancellationException) { throw e }
   catch(_: Exception) { return null }
   finally { coverSlots.release() }
@@ -117,6 +129,10 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
  fun archiveMode(contents: Boolean) { _state.update { it.copy(archiveContents = contents) } }
  fun archiveDefault(contents: Boolean) { viewModelScope.launch { app.preferences.saveArchiveContents(contents) } }
  init {
+  viewModelScope.launch {
+   state.map { it.previewRequest() }.distinctUntilChanged()
+    .collectLatest { request -> if (request != null) withContext(Dispatchers.IO) { loadPreview(request) } }
+  }
   viewModelScope.launch { app.preferences.archiveContents.collect { value -> _state.update { it.copy(archiveContents = value, archiveDefault = value) } } }
   viewModelScope.launch { app.preferences.configuration.catch { notify(Words.get(R.string.could_not_read_channels_and_filters, it.message)) }.collect { config ->
    applyConfiguration(config)
@@ -125,7 +141,10 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   viewModelScope.launch { app.preferences.attachmentView.catch { notify(Words.get(R.string.could_not_read_preferences, it.message)) }.collect { value -> _state.update { it.copy(attachmentView = value) } } }
   viewModelScope.launch { app.preferences.clearBeforeDownload.catch { notify(Words.get(R.string.could_not_read_download_settings, it.message)) }.collect { value -> _state.update { it.copy(clearBeforeDownload = value) } } }
   viewModelScope.launch { tg.auth.collect { auth ->
-   _state.update { it.copy(auth = auth.optString("@type"), authState = auth) }
+   _state.update {
+    val next = it.copy(auth = auth.optString("@type"), authState = auth)
+    if (next.auth != it.auth && (next.auth == "authorizationStateReady" || it.auth == "authorizationStateReady")) next.resetListing().copy(restoreReadPeriod = next.auth == "authorizationStateReady" && next.channel?.profile?.cacheAttachments == true) else next
+   }
    routeForConfiguration()
    if (auth.optString("@type") == "authorizationStateClosed") _state.update { it.copy(channels = emptyList(), allAttachments = emptyList(), attachments = emptyList(), selected = emptySet(), scannedPeriod = null, scanComplete = false) }
   } }
@@ -197,8 +216,8 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   _state.update { it.copy(attachmentView = value) }
   viewModelScope.launch { runCatching { app.preferences.saveAttachmentView(value) }.onFailure { notify(Words.get(R.string.could_not_save_preference, it.message)) } }
  }
- fun postPeriod(value: PostPeriod) { if (!_state.value.busy) _state.update { it.copy(postPeriod = value) } }
- private fun launchOperation(label: String, transfer: Boolean = false, onFinished: () -> Unit = {}, body: suspend () -> Unit) {
+ fun postPeriod(value: PostPeriod) { _state.update { if (it.busy) it else it.choosePeriod(value) } }
+ private fun launchOperation(label: String, transfer: Boolean = false, cancelMessage: Int = R.string.operation_canceled_previously_read_attachments_and_completed, onFinished: () -> Unit = {}, body: suspend () -> Unit) {
   if (_state.value.busy) return
   _state.update { it.copy(busy = true, progress = label, fraction = null, failures = emptyList()) }
   val job = viewModelScope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
@@ -217,7 +236,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   operation = job
   job.invokeOnCompletion { cause ->
    onFinished()
-   if (cause is CancellationException) notify(Words.get(R.string.operation_canceled_previously_read_attachments_and_completed))
+   if (cause is CancellationException) notify(Words.get(cancelMessage))
    _state.update { it.copy(busy = false, fraction = null, activeDownloads = emptyMap(), progress = if (transfer) it.progress else "") }
    if (foregroundRecheckPending && _state.value.ready) {
     foregroundRecheckPending = false
@@ -277,9 +296,17 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   initialRoutePending = false
   launchOperation(Words.get(R.string.adding_favorite)) { applyConfiguration(app.preferences.addFavorite(channel)) }
  }
- fun removeFavorite(channel: Channel) = launchOperation(Words.get(R.string.removing_favorite)) { applyConfiguration(app.preferences.removeFavorite(channel.id)); routeForConfiguration() }
+ fun removeFavorite(channel: Channel) = launchOperation(Words.get(R.string.removing_favorite)) {
+  previewLock.withLock { cacheFor(channel.id).use { it.clear() } }
+  applyConfiguration(app.preferences.removeFavorite(channel.id)); routeForConfiguration()
+ }
  fun onForeground() {
   tg.onForeground()
+  val today = java.time.LocalDate.now()
+  if (today != foregroundDay && !_state.value.busy) {
+   foregroundDay = today
+   _state.update { if (it.channel?.profile?.cacheAttachments == true && it.postPeriod.mode in setOf(PostPeriodMode.TODAY, PostPeriodMode.WEEK)) it.resetListing() else it }
+  }
   updateStorageState()
   if (!_state.value.ready || _state.value.busy) { foregroundRecheckPending = true; return }
   if (_state.value.fileAccess && _state.value.auth == "notStarted") {
@@ -319,19 +346,137 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
   try { app.storage.delete(files) } finally { refreshDownloads() }
  }
 
- fun scan() = launchOperation(Words.get(R.string.reading_metadata)) {
-  val channel = requireNotNull(_state.value.channel) { Words.get(R.string.select_a_channel_in_settings) }
-  val period = _state.value.postPeriod
-  val today = java.time.LocalDate.now()
-  val window = period.window(today)
-  _state.update { it.copy(allAttachments = emptyList(), attachments = emptyList(), selected = emptySet(), scannedPeriod = period to today, scanComplete = false) }
-  val files = tg.attachments(channel.id, window) { page ->
-   val grouped = ArchiveNames.group(page)
-   _state.update { s -> s.withFiles(grouped, s.showCovers, applyFilters = true).copy(progress = Words.get(R.string.attachments_found, page.size)) }
-  }
-  _state.update { it.copy(scanComplete = true) }
-  notify(if (files.isEmpty()) Words.get(R.string.no_attachments_available) else Words.get(R.string.attachments_read_exact_matches_selected, files.size, _state.value.selected.size))
+ private data class PreviewRequest(val chat: Long, val period: PostPeriod, val restorePeriod: Boolean)
+ private fun UiState.previewRequest(): PreviewRequest? {
+  val active = channel ?: return null
+  return if (previewPending && active.profile.cacheAttachments && auth == "authorizationStateReady" && !busy)
+   PreviewRequest(active.id, postPeriod, restoreReadPeriod) else null
  }
+ private suspend fun loadPreview(request: PreviewRequest) {
+  val today = java.time.LocalDate.now()
+  try {
+   previewLock.withLock {
+    cacheFor(request.chat).use { cache ->
+     val period = if (request.restorePeriod && cache.hasHistory()) cache.lastPeriod() ?: request.period else request.period
+     val span = try { period.window(today).historyUntil(java.time.Instant.now().epochSecond + 1) }
+      catch (_: IllegalArgumentException) { null }
+     val covered = if (span != null && cache.hasHistory()) cache.covered() else emptyList()
+     val examined = span != null && covered.any { it.start < span.end && span.start < it.end }
+     val files = if (examined && span != null)
+      ArchiveNames.group(cachedAttachments(cache.load(span), covered, request.chat)) else emptyList()
+     val complete = examined && span != null && cache.missing(span).isEmpty()
+     currentCoroutineContext().ensureActive()
+     _state.update { s ->
+      if (s.previewRequest() != request) s
+      else s.withFiles(files, s.showCovers, applyFilters = true).copy(postPeriod = period,
+       previewPending = false, restoreReadPeriod = false, cachedListing = true,
+       scannedPeriod = if (examined) period to today else null, scanComplete = complete)
+     }
+    }
+   }
+  } catch (e: CancellationException) { currentCoroutineContext().ensureActive(); previewFailed(request, e) }
+  catch (e: Exception) { previewFailed(request, e) }
+ }
+ private fun previewFailed(request: PreviewRequest, error: Exception) {
+  _state.update { if (it.previewRequest() == request) it.copy(previewPending = false, restoreReadPeriod = false, message = error.localizedMessage ?: Words.get(R.string.operation_failed)) else it }
+ }
+ private fun PostWindow.historyUntil(horizon: Long): HistoryRange? {
+  val lo = HistoryPoint(start ?: 0L)
+  val hi = HistoryPoint(minOf(endExclusive ?: horizon, horizon))
+  return if (lo < hi) HistoryRange(lo, hi) else null
+ }
+ private suspend fun cacheFor(chat: Long) = AttachmentCache(app, tg.accountId(), chat)
+ suspend fun cacheOptions(channel: Channel): Pair<Boolean, PostPeriod> = withContext(Dispatchers.IO) {
+  cacheFor(channel.id).use { it.hasData() to (it.lastPeriod() ?: PostPeriod(channel.profile.initialPeriod)) }
+ }
+ fun clearAttachmentCache(channel: Channel) = launchOperation(Words.get(R.string.clear_attachment_cache)) {
+  previewLock.withLock { cacheFor(channel.id).use { it.clear() } }
+  _state.update { if (it.channel?.id == channel.id && (it.cachedListing || it.channel.profile.cacheAttachments)) it.resetListing() else it }
+  notify(Words.get(R.string.attachment_cache_cleared))
+ }
+ fun scan() {
+  val channel = _state.value.channel ?: return
+  readPeriod(channel, _state.value.postPeriod, refresh = false)
+ }
+ fun refreshFromTelegram(channel: Channel, period: PostPeriod) {
+  if (channel.profile.cacheAttachments) readPeriod(channel, period, refresh = true)
+ }
+ private fun readPeriod(channel: Channel, period: PostPeriod, refresh: Boolean) =
+  launchOperation(Words.get(R.string.reading_metadata), cancelMessage = R.string.cache_partial) {
+   val today = java.time.LocalDate.now()
+   val window = period.window(today)
+   val visible = _state.value.channel?.id == channel.id
+   if (visible) _state.update { s ->
+    val base = if (channel.profile.cacheAttachments && s.postPeriod == period && s.cachedListing) s else s.resetListing()
+    base.copy(scannedPeriod = period to today, scanComplete = false, postPeriod = period, cachedListing = channel.profile.cacheAttachments, previewPending = false, restoreReadPeriod = false)
+   }
+   fun display(page: List<Attachment>) {
+    val grouped = if (visible) ArchiveNames.group(page) else emptyList()
+    _state.update { s ->
+     val updated = if (visible && s.channel?.id == channel.id) s.withFiles(grouped, s.showCovers, applyFilters = true, keepExistingSelection = channel.profile.cacheAttachments) else s
+     updated.copy(progress = Words.get(R.string.attachments_found, page.size))
+    }
+   }
+   if (!channel.profile.cacheAttachments) {
+    val files = tg.attachments(channel.id, window, ::display)
+    cacheFor(channel.id).use { it.remember(period) }
+    _state.update { it.copy(scanComplete = true) }
+    notify(if (files.isEmpty()) Words.get(R.string.no_attachments_available) else Words.get(R.string.attachments_read_exact_matches_selected, files.size, _state.value.selected.size))
+    return@launchOperation
+   }
+   val now = java.time.Instant.now().epochSecond
+   val horizon = now + 1
+   val span = window.historyUntil(horizon)
+   cacheFor(channel.id).use { cache ->
+    cache.remember(period)
+    if (span != null) {
+     val (start, end) = span
+     val posts = cache.load(span)
+     fun show() = display(cachedAttachments(posts, cache.covered(), channel.id))
+     show()
+     if (refresh) cache.requestRefresh(span, end.date == horizon)
+     val gaps = cache.missing(span)
+     val onlyTail = !refresh && end.date == horizon && gaps.size == 1 && gaps.single().let { it.end == end && it.start > start }
+     fun online() = tg.connection.value == R.string.connected
+     fun checkOnline() = check(online()) { Words.get(if (onlyTail) R.string.cache_offline_new else R.string.cache_partial) }
+     try {
+      if (gaps.isNotEmpty()) {
+       if (tg.connection.value in setOf(R.string.connecting_to_telegram, R.string.updating)) {
+        withTimeoutOrNull(8000) { tg.connection.first { it == R.string.connected || it == R.string.no_internet_connection } }
+       }
+       checkOnline()
+      }
+      tg.readHistory(channel.id, gaps, end.takeIf { it.date == horizon }) { examined, messages ->
+       checkOnline()
+       val page = messages.map(CachedPost::from)
+       // A later post may have the very same Unix second as this scan.
+       val checkpoint = if (examined.end == end && end.date == horizon) {
+        val lastId = page.filter { it.point.date == now }.maxOfOrNull { it.point.id } ?: -1L
+        minOf(end, HistoryPoint(now,lastId + 1))
+       } else examined.end
+       if (examined.start < checkpoint) {
+        val verified = HistoryRange(examined.start, checkpoint)
+        cache.accept(verified, page)
+        posts.subMap(verified.start,true,verified.end,false).clear()
+        page.forEach { posts[it.point] = it }
+        show()
+       }
+      }
+     } catch (e: TimeoutCancellationException) {
+      currentCoroutineContext().ensureActive()
+      notify(Words.get(if (!online() && onlyTail) R.string.cache_offline_new else R.string.cache_partial))
+      return@launchOperation
+     } catch (e: CancellationException) { throw e }
+     catch (e: Exception) {
+      notify(if (!online() && onlyTail) Words.get(R.string.cache_offline_new)
+       else Words.get(R.string.cache_partial) + if (online()) " " + e.localizedMessage.orEmpty() else "")
+      return@launchOperation
+     }
+    }
+    if (visible) _state.update { it.copy(scanComplete = true) }
+    if (refresh) { cache.finishRefresh(); notify(Words.get(R.string.attachment_cache_updated)) }
+   }
+  }
  fun toggle(key: String, local: Boolean = false) { if (_state.value.busy) return; _state.update { s ->
   if (local) s.copy(downloadedSelection = s.downloadedSelection.toggle(key)) else if (s.attachments.any { it.key == key }) s.copy(selected = s.selected.toggle(key)) else s
  } }
@@ -376,34 +521,40 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
      progress = Words.get(R.string.completed_active, completed.size, files.size, s.activeDownloads.size, ParallelDownloads.LIMIT),
      fraction = completed.size.toFloat() / files.size) }
    }
-   ParallelDownloads.run(files) { a ->
-    // TDLib identifies content by fileId: do not race two messages sharing the same file.
-    fileLocks.getOrPut(a.fileId) { Mutex() }.withLock {
-     currentCoroutineContext().ensureActive()
-     try {
-      val existing = app.storage.existing(a)
-      if (existing != null) { saved[a.key] = existing; completed += a.key; return@withLock }
-      val target = app.storage.beginDownload(a)
-      refreshDownloads()
-      _state.update { it.copy(activeDownloads = it.activeDownloads + (a.fileId to DownloadProgress(a.name, size = a.size))) }
-      updateSummary()
-      val source = tg.download(a)
-      saved[a.key] = finishDownload(source, target)
+   ParallelDownloads.run(files) { listed ->
+    try {
+     withAttachment(listed) { a, existing ->
+      if (existing != null) saved[a.key] = existing else {
+       val target = app.storage.beginDownload(a)
+       refreshDownloads()
+       _state.update { it.copy(activeDownloads = it.activeDownloads + (a.fileId to DownloadProgress(a.name, size = a.size))) }
+       try {
+        updateSummary()
+        saved[a.key] = finishDownload(tg.download(a), target)
+       } finally { _state.update { it.copy(activeDownloads = it.activeDownloads - a.fileId) } }
+      }
       completed += a.key
-     } catch (e: CancellationException) { throw e }
-     catch (e: Exception) { failures[a.key] = "${a.name}: ${e.message}" }
-     finally {
-      _state.update { it.copy(activeDownloads = it.activeDownloads - a.fileId) }
-      runCatching { refreshDownloads() }
-      updateSummary()
      }
-    }
+    } catch (e: CancellationException) { throw e }
+    catch (e: Exception) { failures[listed.key] = "${listed.name}: ${e.message}" }
+    finally { runCatching { refreshDownloads() }; updateSummary() }
    }
    refreshDownloads()
    _state.update { it.copy(progress = Words.get(R.string.downloads_completed, completed.size, files.size), fraction = null,
     shareFiles = if (share && completed.size == files.size) files.map { a -> saved.getValue(a.key) } else emptyList()) }
    if (share && completed.size != files.size) notify(Words.get(R.string.sharing_could_not_start_because_some_files))
 
+  }
+ }
+ private suspend fun withAttachment(listed: Attachment, reuse: Boolean = true, body: suspend (Attachment, Downloaded?) -> Unit) {
+  currentCoroutineContext().ensureActive()
+  if (reuse && listed.cachedSlot != null) {
+   app.storage.existing(listed)?.let { body(listed, it); return }
+  }
+  val live = tg.resolveCached(listed)
+  fileLocks.getOrPut(live.fileId) { Mutex() }.withLock {
+   currentCoroutineContext().ensureActive()
+   body(live, if (reuse) app.storage.existing(live) else null)
   }
  }
  @Synchronized private fun finishDownload(source: File, target: DownloadTarget): Downloaded =
@@ -461,9 +612,8 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     check(sent == file.size && source.length() == file.size && source.lastModified() == modified) { Words.get(R.string.the_local_file_changed_during_upload_and) }
     if (!settings.keep) app.storage.delete(listOf(file))
    }
-   suspend fun attachment(a: Attachment) = fileLocks.getOrPut(a.fileId) { Mutex() }.withLock {
-    report(a.name, remoteNames.getValue(a.key)) {
-     val existing = app.storage.existing(a)
+   suspend fun attachment(listed: Attachment) = report(listed.name, remoteNames.getValue(listed.key)) {
+    withAttachment(listed) { a, existing ->
      if (existing != null) localFile(existing, remoteNames.getValue(a.key))
      else {
       requireSpace(a.size)
@@ -556,8 +706,7 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
    }
    requireSpace(parts.filter { needsName || app.storage.existing(it) == null }.sumOf { it.size.coerceAtLeast(0) })
    val saved = ConcurrentHashMap<String, Downloaded>()
-   ParallelDownloads.run(parts) { part -> fileLocks.getOrPut(part.fileId) { Mutex() }.withLock {
-    val existing = if(needsName) null else app.storage.existing(part)
+   ParallelDownloads.run(parts) { listed -> withAttachment(listed, reuse = !needsName) { part, existing ->
     if(existing != null) saved[part.key] = existing else {
      val target = if (archive) {
       val filename = volumeName(part, localName)
