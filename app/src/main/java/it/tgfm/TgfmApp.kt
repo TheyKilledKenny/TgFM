@@ -3,6 +3,8 @@ import android.app.Application
 import it.tgfm.data.*
 import it.tgfm.telegram.TelegramClient
 class TgfmApp: Application() {
+ override fun onCreate() { super.onCreate(); Words.initialize(this) }
+ override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { super.onConfigurationChanged(newConfig); Words.refresh() }
  val telegram by lazy { TelegramClient(this) }
  val preferences by lazy { Preferences(this) }
  val vault by lazy { CredentialVault(this) }

@@ -1,5 +1,8 @@
 package it.tgfm.data
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import android.content.*
 import android.database.Cursor
 import android.database.MatrixCursor
@@ -17,7 +20,7 @@ class ArchiveProvider : ContentProvider() {
  private fun sources(uri: Uri): List<File> {
   val root = WorkFolder(requireNotNull(context)).root.canonicalFile
   return uri.pathSegments.map { File(it).canonicalFile.also { file ->
-   require(file.parentFile == root && !file.name.startsWith('.') && file.isFile) { "Archivio non disponibile nella cartella di lavoro." }
+   require(file.parentFile == root && !file.name.startsWith('.') && file.isFile) { Words.get(R.string.archive_unavailable_in_the_working_folder) }
   } }.also { require(it.isNotEmpty()) }
  }
  private fun entry(uri: Uri) = ArchiveReader(sources(uri)).use { it.seekEntry(requireNotNull(uri.getQueryParameter("entry")).toInt()) }
@@ -40,7 +43,7 @@ class ArchiveProvider : ContentProvider() {
    override fun onGetSize() = entry.size
    override fun onRead(offset: Long, size: Int, data: ByteArray): Int {
     try {
-     check(files.map { it.length() to it.lastModified() } == expected && files.all { it.isFile }) { "Archivio modificato o eliminato." }
+     check(files.map { it.length() to it.lastModified() } == expected && files.all { it.isFile }) { Words.get(R.string.archive_changed_or_deleted) }
      if (offset < position) { reader.close(); reader = ArchiveReader(files); reader.seekEntry(index); position = 0 }
      val skip = ByteArray(256 * 1024)
      while(position < offset) {
@@ -51,7 +54,7 @@ class ArchiveProvider : ContentProvider() {
      val n = reader.read(data, minOf(size, data.size)).coerceAtLeast(0)
      position += n
      return n
-    } catch(e: Exception) { throw ErrnoException("Lettura archivio: ${e.message}", OsConstants.EIO, e) }
+    } catch(e: Exception) { throw ErrnoException(Words.get(R.string.reading_archive, e.message), OsConstants.EIO, e) }
    }
    override fun onRelease() { try { reader.close() } finally { thread.quitSafely() } }
   }

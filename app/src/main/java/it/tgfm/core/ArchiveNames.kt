@@ -1,13 +1,20 @@
 package it.tgfm.core
 
+import it.tgfm.R
+import it.tgfm.Words
+
 /** Naming recognition only: actual format and completeness are verified by the decoder. */
 object ArchiveNames {
  data class Part(val name: String, val number: Int, val first: Int)
  fun part(name: String): Part? {
-  Regex("(?i)^(.+)\\.part(\\d+)\\.rar$").matchEntire(name)?.let { return Part(it.groupValues[1]+".rar", it.groupValues[2].toInt(), 1) }
-  Regex("(?i)^(.+\\.(?:7z|zip))\\.(\\d{3,})$").matchEntire(name)?.let { return Part(it.groupValues[1], it.groupValues[2].toInt(), 1) }
-  Regex("(?i)^(.+)\\.r(\\d{2,})$").matchEntire(name)?.let { return Part(it.groupValues[1]+".rar", it.groupValues[2].toInt()+1, 0) }
-  Regex("(?i)^(.+)\\.z(\\d{2,})$").matchEntire(name)?.let { return Part(it.groupValues[1]+".zip", it.groupValues[2].toInt(), 1) }
+  Regex("(?i)^(.+)\\.part(\\d+)\\.rar$").matchEntire(name)?.let { return Part(it.groupValues[1]+".rar", it.groupValues[2].toIntOrNull() ?: return null, 1) }
+  Regex("(?i)^(.+\\.(?:7z|zip))\\.(\\d{3,})$").matchEntire(name)?.let { return Part(it.groupValues[1], it.groupValues[2].toIntOrNull() ?: return null, 1) }
+  Regex("(?i)^(.+)\\.r(\\d{2,})$").matchEntire(name)?.let {
+   val number = it.groupValues[2].toIntOrNull() ?: return null
+   if (number == Int.MAX_VALUE) return null
+   return Part(it.groupValues[1]+".rar", number + 1, 0)
+  }
+  Regex("(?i)^(.+)\\.z(\\d{2,})$").matchEntire(name)?.let { return Part(it.groupValues[1]+".zip", it.groupValues[2].toIntOrNull() ?: return null, 1) }
   return null
  }
  fun family(name: String): String {
@@ -26,14 +33,14 @@ object ArchiveNames {
     val sorted = members.sortedBy { part(it.name)?.number ?: if(it.name.endsWith(".zip", true)) Int.MAX_VALUE else 0 }
     if(sorted.map { it.name.lowercase() }.distinct().size != sorted.size) return@flatMap members
     val first = sorted.first()
-    listOf(first.copy(name = part(first.name)?.name ?: first.name, size = sorted.sumOf { it.size }, parts = sorted, mime = when((part(first.name)?.name ?: first.name).substringAfterLast('.').lowercase()) { "rar" -> "application/vnd.rar"; "zip" -> "application/zip"; "7z" -> "application/x-7z-compressed"; else -> first.mime }))
+    listOf(first.copy(name = part(first.name)?.name ?: first.name, size = sorted.sumOf { it.size }, parts = sorted, cover = sorted.minBy { it.messageId }.cover, mime = when((part(first.name)?.name ?: first.name).substringAfterLast('.').lowercase()) { "rar" -> "application/vnd.rar"; "zip" -> "application/zip"; "7z" -> "application/x-7z-compressed"; else -> first.mime }))
    }
   }
  }
  fun members(file: Attachment) = file.parts.ifEmpty { listOf(file) }
  fun safeEntry(name: String): String {
   val path = name.replace('\\', '/')
-  require(path.isNotBlank() && !path.startsWith('/') && !Regex("^[A-Za-z]:").containsMatchIn(path) && path.split('/').none { it == ".." } && path.none { it == '\u0000' || it == '\r' || it == '\n' }) { "Percorso non valido nell'archivio: $name" }
+  require(path.isNotBlank() && !path.startsWith('/') && !Regex("^[A-Za-z]:").containsMatchIn(path) && path.split('/').none { it == ".." } && path.none { it == '\u0000' || it == '\r' || it == '\n' }) { Words.get(R.string.invalid_archive_path, name) }
   return path.split('/').filter { it.isNotEmpty() && it != "." }.joinToString("/").also { require(it.isNotEmpty()) }
  }
 }

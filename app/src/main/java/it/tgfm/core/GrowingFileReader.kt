@@ -1,5 +1,8 @@
 package it.tgfm.core
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -22,18 +25,18 @@ class GrowingFileReader(private val snapshot: suspend (Long) -> AvailableBytes, 
   while (true) {
    currentCoroutineContext().ensureActive()
    val previous = known
-   val state = if (previous != null && (previous.complete || position < availableUntil)) previous.copy(readable = (availableUntil - position).coerceAtLeast(0))
+   val state = if (previous?.file != null && (previous.complete || position < availableUntil)) previous.copy(readable = (availableUntil - position).coerceAtLeast(0))
     else snapshot(position).also { known = it; availableUntil = position + it.readable }
-   require(state.readable >= 0 && state.size >= 0) { "Disponibilità del file non valida." }
+   require(state.readable >= 0 && state.size >= 0) { Words.get(R.string.invalid_file_availability) }
    if (state.complete && position == state.size) { finalSize = state.size; return -1 }
-   check(!state.complete || position < state.size) { "La dimensione del file è cambiata durante l'invio." }
+   check(!state.complete || position < state.size) { Words.get(R.string.file_size_changed_during_upload) }
    if (state.readable > 0 && state.file != null) {
     if (input == null) {
      try { input = RandomAccessFile(state.file, "r") }
      catch (e: java.io.FileNotFoundException) {
       // TDLib may have just renamed the partial to its completed native path.
       known = null
-      check((System.nanoTime() - started) / 1_000_000 < stallMillis) { "File TDLib non più disponibile." }
+      check((System.nanoTime() - started) / 1_000_000 < stallMillis) { Words.get(R.string.tdlib_file_is_no_longer_available) }
       delay(150); continue
      }
     }
@@ -41,11 +44,11 @@ class GrowingFileReader(private val snapshot: suspend (Long) -> AvailableBytes, 
     val stream = requireNotNull(input)
     stream.seek(position)
     val read = stream.read(buffer, 0, count)
-    check(read > 0) { "I dati dichiarati disponibili da Telegram non sono leggibili." }
+    check(read > 0) { Words.get(R.string.could_not_read_the_data_reported_as) }
     position += read
     return read
    }
-   check((System.nanoTime() - started) / 1_000_000 < stallMillis) { "Il download Telegram non fornisce nuovi dati. Riprova il trasferimento." }
+   check((System.nanoTime() - started) / 1_000_000 < stallMillis) { Words.get(R.string.telegram_has_stopped_providing_new_data_retry) }
    delay(150)
   }
  }

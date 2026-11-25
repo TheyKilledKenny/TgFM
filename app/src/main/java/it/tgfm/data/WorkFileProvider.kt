@@ -1,5 +1,8 @@
 package it.tgfm.data
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.content.Context
@@ -14,11 +17,11 @@ import java.io.File
 class WorkFileProvider : ContentProvider() {
  override fun onCreate() = true
  private fun file(uri: Uri): File {
-  require(uri.pathSegments.size == 1) { "URI non valido." }
+  require(uri.pathSegments.size == 1) { Words.get(R.string.invalid_uri) }
   return checked(requireNotNull(context), File(uri.pathSegments.single()))
  }
  override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
-  require(mode == "r") { "Accesso consentito solo in lettura." }
+  require(mode == "r") { Words.get(R.string.read_only_access) }
   return ParcelFileDescriptor.open(file(uri), ParcelFileDescriptor.MODE_READ_ONLY)
  }
  override fun getType(uri: Uri) = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(file(uri).extension.lowercase()) ?: "application/octet-stream"
@@ -33,7 +36,7 @@ class WorkFileProvider : ContentProvider() {
  companion object {
   private fun checked(context: Context, file: File): File {
    val root = WorkFolder(context).root.canonicalFile
-   require(file.canonicalFile.parentFile == root && !file.name.startsWith(".") && file.isFile) { "File non disponibile nella cartella di lavoro." }
+   require(file.canonicalFile.parentFile == root && !file.name.startsWith(".") && file.isFile) { Words.get(R.string.file_unavailable_in_the_working_folder) }
    return file
   }
   fun uri(context: Context, file: File): Uri = Uri.Builder().scheme("content").authority(context.packageName + ".files").appendPath(checked(context, file).absolutePath).build()

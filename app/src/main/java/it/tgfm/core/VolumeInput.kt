@@ -1,5 +1,8 @@
 package it.tgfm.core
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import java.io.Closeable
 import java.io.File
 import java.io.RandomAccessFile
@@ -17,7 +20,7 @@ class VolumeInput(files: List<File>) : Closeable {
   size = lengths.sum()
  }
  fun seek(offset: Long, whence: Int): Long {
-  val next = when(whence) { 0 -> offset; 1 -> position + offset; 2 -> size + offset; else -> error("Origine seek non valida") }
+  val next = when(whence) { 0 -> offset; 1 -> position + offset; 2 -> size + offset; else -> error(Words.get(R.string.invalid_seek_origin)) }
   require(next >= 0)
   position = next
   return next
@@ -29,7 +32,7 @@ class VolumeInput(files: List<File>) : Closeable {
    if(position < base + lengths[i]) {
     inputs[i].seek(position-base)
     val n = inputs[i].read(buffer, 0, minOf(buffer.size.toLong(), base+lengths[i]-position).toInt())
-    check(n > 0) { "Volume troncato durante la lettura." }
+    check(n > 0) { Words.get(R.string.volume_truncated_while_reading) }
     position += n
     return n
    }

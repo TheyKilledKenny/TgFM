@@ -1,5 +1,8 @@
 package it.tgfm.data
 
+import it.tgfm.R
+import it.tgfm.Words
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -23,26 +26,26 @@ class WorkFolder(private val context: Context) {
  fun validate(folder: File): File {
   val canonical = folder.canonicalFile
   val volume = volumes().firstOrNull { canonical.path.startsWith(it.path + File.separator) }
-  require(volume != null) { "Scegli una sottocartella della memoria condivisa o della scheda SD." }
+  require(volume != null) { Words.get(R.string.choose_a_subfolder_in_shared_storage_or) }
   val relative = canonical.relativeTo(volume).invariantSeparatorsPath
-  require(relative != "Android" && !relative.startsWith("Android/") && !relative.split('/').contains(".tgfm-cache")) { "Scegli una cartella esterna ai dati delle app e alla cache TgFM." }
-  check(hasAccess()) { "Concedi prima l'accesso ai file in Configura." }
-  check(canonical.mkdirs() || canonical.isDirectory) { "Cartella non disponibile." }
-  check(canonical.canWrite() && canonical.canRead()) { "Cartella non leggibile o scrivibile." }
+  require(relative != "Android" && !relative.startsWith("Android/") && !relative.split('/').contains(".tgfm-cache")) { Words.get(R.string.choose_a_folder_outside_app_data_and) }
+  check(hasAccess()) { Words.get(R.string.grant_file_access_in_settings_first) }
+  check(canonical.mkdirs() || canonical.isDirectory) { Words.get(R.string.folder_unavailable) }
+  check(canonical.canWrite() && canonical.canRead()) { Words.get(R.string.cannot_read_or_write_this_folder) }
   return canonical
  }
  fun fromTree(uri: Uri): File {
-  require(uri.authority == "com.android.externalstorage.documents") { "TDLib richiede una cartella locale: i fornitori cloud non sono supportati." }
+  require(uri.authority == "com.android.externalstorage.documents") { Words.get(R.string.tdlib_requires_a_local_folder_cloud_providers) }
   val id = DocumentsContract.getTreeDocumentId(uri)
   val volumeId = id.substringBefore(':'); val relative = id.substringAfter(':', "")
   val volume = if (volumeId == "primary") Environment.getExternalStorageDirectory()
-   else volumes().firstOrNull { it.name.equals(volumeId, true) } ?: error("Volume non disponibile sul dispositivo.")
+   else volumes().firstOrNull { it.name.equals(volumeId, true) } ?: error(Words.get(R.string.volume_unavailable_on_this_device))
   return validate(File(volume, relative))
  }
- fun save(folder: File) { check(prefs.edit().putString("path", validate(folder).absolutePath).commit()) { "Impossibile salvare la cartella." } }
+ fun save(folder: File) { check(prefs.edit().putString("path", validate(folder).absolutePath).commit()) { Words.get(R.string.could_not_save_folder_choice) } }
  fun requireReady() {
   validate(root)
-  check(cache.mkdirs() || cache.isDirectory) { "Impossibile creare la cache nella cartella scelta." }
-  check(cache.canonicalFile.parentFile == root.canonicalFile) { "La cache non deve essere un collegamento a un'altra cartella." }
+  check(cache.mkdirs() || cache.isDirectory) { Words.get(R.string.could_not_create_the_cache_in_the) }
+  check(cache.canonicalFile.parentFile == root.canonicalFile) { Words.get(R.string.the_cache_cannot_be_a_link_to) }
  }
 }

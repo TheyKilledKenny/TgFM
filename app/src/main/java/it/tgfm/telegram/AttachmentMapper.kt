@@ -6,6 +6,25 @@ import org.json.JSONObject
 
 /** Reads metadata only. Does not invoke any TDLib download or thumbnail request. */
 object AttachmentMapper {
+ fun coverFromMessage(message: JSONObject): CoverImage? {
+  val content = message.optJSONObject("content") ?: return null
+  // Exclude web previews, stickers and pictures embedded in unrelated content.
+  if(content.optString("@type") != "messagePhoto") return null
+  val photo = content.optJSONObject("photo") ?: return null
+  return photoPreview(photo).copy(caption = content.optJSONObject("caption")?.optString("text").orEmpty(), messageId = message.getLong("id"))
+ }
+ private fun preview(file: JSONObject?, owner: JSONObject) = CoverImage(
+  fileId = file?.takeIf { maxOf(it.optLong("size"), it.optLong("expected_size")) <= 256 * 1024 }?.optInt("id") ?: 0,
+  miniature = owner.optJSONObject("minithumbnail")?.optString("data").orEmpty()
+ )
+ fun chatAvatar(chat: JSONObject): CoverImage? = chat.optJSONObject("photo")?.let { preview(it.optJSONObject("small"), it) }
+ private fun photoPreview(photo: JSONObject): CoverImage {
+  val sizes = photo.optJSONArray("sizes")
+  val small = if(sizes == null) null else (0 until sizes.length()).map { sizes.getJSONObject(it) }
+   .filter { it.optInt("width") in 1..400 && it.optInt("height") in 1..400 }
+   .maxByOrNull { it.optLong("width") * it.optLong("height") }
+  return preview(small?.optJSONObject("photo"), photo)
+ }
  fun fromMessage(message: JSONObject): List<Attachment> {
   val result = linkedMapOf<Int, Attachment>()
   val content = message.optJSONObject("content") ?: return emptyList()
@@ -18,7 +37,14 @@ object AttachmentMapper {
    val localExtension = if (extension == "bin") mimeByExtension.entries.firstOrNull { it.value == suppliedMime }?.key ?: extension else extension
    val name = owner.optString("file_name").ifBlank { "${category.name.lowercase(java.util.Locale.ROOT)}_${message.optLong("id")}_$id.$localExtension" }
    val mime = suppliedMime.ifBlank { mimeByExtension[name.substringAfterLast('.', "").lowercase(java.util.Locale.ROOT)] ?: defaultMime }
-   result[id] = Attachment(message.optLong("chat_id"), message.optLong("id"), id, name, mime, file.optLong("size").takeIf { it > 0 } ?: file.optLong("expected_size"), message.optLong("date"), caption, category)
+   val image = category == Category.IMAGE || category == Category.ANIMATION || mime.startsWith("image/", true) ||
+    name.substringAfterLast('.', "").lowercase(java.util.Locale.ROOT) in imageExtensions
+   val imagePreview = when {
+    !image -> null
+    category == Category.IMAGE -> photoPreview(owner)
+    else -> preview(owner.optJSONObject("thumbnail")?.optJSONObject("file"), owner)
+   }
+   result[id] = Attachment(message.optLong("chat_id"), message.optLong("id"), id, name, mime, file.optLong("size").takeIf { it > 0 } ?: file.optLong("expected_size"), message.optLong("date"), caption, category, imagePreview = imagePreview)
   }
   fun visit(obj: JSONObject) {
    when (obj.optString("@type")) {
@@ -48,5 +74,6 @@ object AttachmentMapper {
   visit(content)
   return result.values.toList()
  }
+ private val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heif", "heic", "avif", "tif", "tiff")
  private val mimeByExtension = linkedMapOf("pdf" to "application/pdf", "zip" to "application/zip", "rar" to "application/vnd.rar", "epub" to "application/epub+zip", "7z" to "application/x-7z-compressed", "jpg" to "image/jpeg", "jpeg" to "image/jpeg", "png" to "image/png", "webp" to "image/webp", "gif" to "image/gif", "mp4" to "video/mp4", "webm" to "video/webm", "mp3" to "audio/mpeg", "ogg" to "audio/ogg", "txt" to "text/plain")
 }

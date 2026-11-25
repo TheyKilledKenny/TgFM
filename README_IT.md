@@ -1,6 +1,6 @@
 [English](README.md) | [Italiano](README_IT.md)
 
-Questo progetto è mantenuto da TheyKilledKenny. Il codice è stato scritto da una combinazione di intelligenza umana, caffeina e Codex. 😄
+Vibe Coding! Questo codice è stato sviluppato da Codex, con la supervisione di TheyKilledKenny.
 
 # TgFM - Telegram File Manager
 
@@ -10,13 +10,11 @@ Questo progetto è mantenuto da TheyKilledKenny. Il codice è stato scritto da u
 
 TgFM è un'app Android nativa per consultare gli allegati dei propri canali e gruppi Telegram, selezionarli attraverso regole configurabili, salvarli nella cartella scelta, condividerli o inviarli a un server FTP/FTPS.
 
-L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. L'interfaccia è in italiano.
+L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. TgFM segue le lingue preferite di Android. Supporta italiano e inglese e usa l’inglese se nessuna lingua preferita è supportata. In **Configura → Lingua dell’app** puoi scegliere **Italiano**, **English** oppure tornare a **Lingua di sistema**.
 
-**[Scarica TgFM 1.5.4 per Android](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk)** · [SHA-256](https://github.com/TheyKilledKenny/TgFM/releases/download/v1.5.4/TgFM-1.5.4.apk.sha256) · [Installazione](#installazione-e-primo-accesso)
+**[Scarica TgFM 1.5.8 per Android (APK di test)](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk)** · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256) · [Installazione](#installazione-e-primo-accesso)
 
-Android 8.0 o successivo · ARM64 · Distribuzione tramite [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases), senza store.
-
-La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) contiene `TgFM-1.5.4.apk` e il checksum SHA-256 nella sezione **Assets**.
+Android 8.0 o successivo · ARM64
 
 ## Indice
 
@@ -34,7 +32,8 @@ La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) 
 - [Architettura](#architettura)
 - [Integrazione TDLib](#integrazione-tdlib)
 - [Licenze di terze parti](#licenze-di-terze-parti)
-- [Contenuto degli archivi (1.5.4)](#contenuto-degli-archivi)
+- [Gruppi filtri e copertine](#gruppi-filtri-e-copertine)
+- [Contenuto degli archivi](#contenuto-degli-archivi)
 - [Note di rilascio](#note-di-rilascio)
 
 ## Funzionalità
@@ -43,7 +42,7 @@ La [release 1.5.4](https://github.com/TheyKilledKenny/TgFM/releases/tag/v1.5.4) 
 - Conservazione locale della sessione e disconnessione volontaria.
 - Selezione di più canali e gruppi preferiti, anche privati o archiviati, con ricerca per nome e cambio rapido del canale attivo, senza un limite totale di 100 elementi.
 - Lettura paginata dei metadati degli allegati, senza scaricarne preventivamente i contenuti; risultati parziali disponibili anche dopo l'annullamento.
-- Periodo dei post da leggere: **Oggi** (predefinito), **Tutti i file**, **Un giorno preciso** o **Intervallo di date**, applicato durante la lettura.
+- Lettura dei post di oggi, degli ultimi 7 giorni, di un giorno specifico, di un intervallo o dell’intero canale. Ogni preferito può avere il proprio periodo iniziale.
 - Riconoscimento di documenti, immagini, video, audio, animazioni e sticker scaricabili.
 - Regole persistenti assegnate a un canale preferito, sul nome, sulla data variabile, sulle estensioni, sul MIME e sulla categoria Telegram.
 - Proposte di regole comuni da più esempi desiderati e indesiderati, con anteprima e conferma.
@@ -70,7 +69,7 @@ Il progetto include soltanto la libreria nativa ARM64. Per un emulatore x86/x86_
 
 ## Installazione e primo accesso
 
-1. Scaricare `TgFM-1.5.4.apk` dagli **Assets** delle [GitHub Releases](https://github.com/TheyKilledKenny/TgFM/releases) dal browser del telefono. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
+1. Dal browser del telefono scaricare l’APK 1.5.8 tramite il link in cima alla pagina. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
 2. Aprire **Configura**, concedere l’accesso ai file e scegliere la cartella in **File e cartella** (default `Download/TgFM`). In **Telegram**, inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
 3. Premere **Configura accesso**, poi inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib. Configura accesso avvia una nuova sessione, eliminando il precedente database Telegram; non è necessario premerlo a ogni avvio dopo un login riuscito.
 4. In **Configura → Canali preferiti**, premere **Aggiorna elenco canali e gruppi**, cercare per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
@@ -94,12 +93,12 @@ All'avvio, l'app apre Selezione quando sessione e canale preferito sono pronti; 
 
 Flusso abituale:
 
-1. In Selezione, toccare il nome del canale per sceglierne uno fra i preferiti, scegliere **Post** (predefinito **Oggi**), poi premere **Leggi**. La ricerca per nome file si combina con la vista corrente senza perdere le checkbox dei file nascosti.
+1. In **Selezione**, toccare il nome o l’immagine del canale per scegliere un preferito. Controllare il periodo in **Post** e premere **Leggi**. La ricerca per nome mantiene selezionati anche i file nascosti.
 2. Verificare i risultati, scegliendo **Mostra → Solo selezionati**, **Selezionati e affini** oppure **Tutti i file**. I selezionati sono sempre in alto, anche se selezionati manualmente; Affini indica le corrispondenze Possibili. La vista scelta viene conservata.
 3. Modificare le checkbox e premere **Salva**, **Condividi** oppure **Salva su FTP**.
 4. In Download sono disponibili i file completi della cartella di lavoro: condivisione, FTP, apertura ed eliminazione.
 
-**Seleziona tutti** e **Deseleziona tutti** agiscono su tutti gli allegati letti del canale, anche quando ricerca e vista ne nascondono alcuni. In Download agiscono sull'intero elenco locale. I pulsanti Salva, Condividi e Salva su FTP usano l'intera selezione, non soltanto le righe visibili.
+**Seleziona tutti** e **Deseleziona tutti** agiscono su tutti gli allegati selezionabili letti del canale, anche quando ricerca e vista ne nascondono alcuni. In Download agiscono sull'intero elenco locale. I pulsanti Salva, Condividi e Salva su FTP usano l'intera selezione, non soltanto le righe visibili.
 
 ### Periodo di pubblicazione e annullamento della lettura
 
@@ -108,27 +107,36 @@ Il selettore **Post** riguarda la data del messaggio Telegram, indipendentemente
 | Opzione | Post letti |
 |---|---|
 | **Oggi** | Dal primo istante del giorno corrente alla mezzanotte successiva |
+| **Ultimi 7 giorni** | Oggi e i sei giorni precedenti |
 | **Tutti i file** | Intera cronologia accessibile |
 | **Un giorno preciso** | Tutti i post della data scelta nel calendario |
 | **Intervallo di date** | Dalla mezzanotte iniziale alla fine dell'ultimo giorno scelto, inclusi entrambi i giorni |
 
-Si usa il fuso orario del telefono, rispettando anche i cambi di ora legale. Oggi viene ricalcolato quando si preme Leggi. Il periodo scelto rimane nella sessione dell'app; una nuova sessione parte da Oggi. Cambiarlo non altera gli allegati già mostrati: per leggere il nuovo periodo premere nuovamente Leggi. Il calendario consente date dal 1970 al 2037, compatibili con i timestamp TDLib; l'intervallo invertito disabilita la lettura e mostra un errore.
+Si usa il fuso orario del telefono, rispettando anche i cambi di ora legale. Oggi viene ricalcolato quando si preme Leggi. Quando si apre un canale, TgFM propone il periodo iniziale del suo profilo. Cambiarlo non altera gli allegati già mostrati: per leggere il nuovo periodo premere nuovamente Leggi. Il calendario consente date dal 1970 al 2037, compatibili con i timestamp TDLib; l'intervallo invertito disabilita la lettura e mostra un errore.
 
-Per i periodi delimitati TgFM usa `getChatMessageByDate` per raggiungere l'ultimo post entro la data finale, poi legge a ritroso e si ferma al primo post precedente alla data iniziale. Non percorre tutta la cronologia per filtrarla successivamente. La lettura riguarda soltanto i metadati, senza avviare download.
+Per i periodi delimitati TgFM usa `getChatMessageByDate` per raggiungere l'ultimo post entro la data finale, poi legge a ritroso e si ferma al primo post precedente alla data iniziale. Non percorre tutta la cronologia per filtrarla successivamente. La scansione legge i metadati degli allegati. Per le foto visibili, TgFM può caricare piccole anteprime.
 
-I risultati vengono pubblicati a ogni pagina ricevuta e vengono applicate le regole del canale attivo. **Annulla operazione** interrompe le richieste successive mantenendo i nomi, i riferimenti e le selezioni automatiche già raccolti: la dicitura **Lettura parziale** distingue il risultato da una lettura completata. I risultati restano utilizzabili per selezione e download. Una nuova lettura sostituisce l'elenco; il cambio canale lo azzera. I metadati sono conservati in memoria, senza introdurre un archivio persistente o migrazioni dei dati.
+I risultati vengono pubblicati a ogni pagina ricevuta e vengono applicate le regole del canale attivo. **Annulla operazione** interrompe le richieste successive mantenendo i nomi, i riferimenti e le selezioni automatiche già raccolti: la dicitura **Lettura parziale** distingue il risultato da una lettura completata. I risultati restano utilizzabili per selezione e download. Una nuova lettura sostituisce l'elenco; il cambio canale lo azzera. I risultati della lettura sono conservati in memoria.
+
+## Gruppi filtri e copertine
+
+In **Filtri**, toccare l’intestazione di un canale per comprimere o espandere le sue regole. Restano visibili il totale e il numero di regole attive. **Comprimi tutti / Espandi tutti** agisce su tutti i gruppi; comprimere un gruppo non disattiva i filtri. Lo stato aperto/chiuso resta al cambio sezione e alla ricreazione della schermata.
+
+In **Configura → Canali preferiti**, apri le impostazioni accanto al preferito e attiva **Foto di copertina**. Una foto nel messaggio immediatamente precedente viene associata al documento, file audio o video successivo. Per un archivio multipart vale la foto prima della prima parte pubblicata. Un messaggio intermedio interrompe l’associazione; anteprime dei link e sticker non sono utilizzati.
+
+Tocca la colonna sinistra per selezionare il file. Sulla copertina compare la spunta. I file senza copertina hanno una checkbox standard nella stessa colonna. Tocca il resto della tessera per aprire l’anteprima con le didascalie. In modalità copertina le foto usate come copertine vengono nascoste ed escluse dalla selezione automatica e da Seleziona tutti. Disattivando la modalità ricompaiono subito. Nei dettagli di un’immagine, anche inviata come documento, TgFM mostra la copia locale o la miniatura disponibile su Telegram. Funziona anche con le copertine spente.
 
 ## Canali e gruppi preferiti
 
 L'aggiornamento enumera tutte le pagine TDLib della lista principale e di quella archiviata e include canali, supergruppi e gruppi di base; le chat personali sono escluse. Il valore 100 è la dimensione di una pagina di caricamento, non il numero massimo di preferiti o risultati. L'elenco completo viene ordinato per nome e i duplicati vengono rimossi.
 
-In **Configura → Canali preferiti** le checkbox aggiungono o rimuovono i preferiti. Il canale attivo può essere cambiato toccandone il nome in Selezione. Cambiare canale azzera i risultati precedenti, che vanno riletti con Leggi; si applicano soltanto i filtri assegnati al canale attivo.
+In **Configura → Canali preferiti**, toccare la foto del canale per aggiungerlo o rimuoverlo. La spunta indica un preferito. Se la foto manca, compare l’iniziale. In **Selezione**, toccare il nome o la foto per cambiare canale. Premere **Leggi** per caricare gli allegati del nuovo canale con i suoi filtri.
 
 Ogni regola nuova o modificata deve essere assegnata a un preferito nell'editor. Le proposte da esempi sono assegnate al canale dal quale sono stati letti gli allegati. Regole uguali su canali diversi rimangono distinte.
 
 Rimuovere un preferito cancella anche i filtri associati a quel canale. Se ci sono filtri, compare una sola conferma con il loro numero; annullandola non cambia nulla. Senza filtri associati la rimozione è immediata. I file già scaricati non vengono eliminati. Se si rimuove il canale attivo viene scelto il primo preferito rimasto; senza preferiti si apre Configura.
 
-Rimane la compatibilità con le preferenze delle versioni precedenti ai preferiti multipli: il vecchio canale selezionato diventa un preferito e riceve le regole precedenti. Eventuali regole senza un vecchio canale vengono conservate come Da assegnare e possono essere associate dall'editor. Questo comportamento già presente riguarda le preferenze, non il recupero della sessione Telegram.
+La rotella accanto a ogni preferito apre il suo profilo. **Foto di copertina** è disattivata per impostazione iniziale. Attivarla per usare la foto pubblicata prima dell’allegato. **Periodo iniziale** propone Oggi, Ultimi 7 giorni o Tutti i file. **Invio archivi** permette di seguire la scelta generale oppure di proporre sempre l’archivio originale o il contenuto. La conferma di invio permette di cambiare la scelta per quella sola operazione.
 
 ## Configurazione dei filtri
 
@@ -175,8 +183,6 @@ La categoria **Documento** può comprendere PDF, EPUB e archivi: non è sinonimo
 - Le regole disattivate o prive di criteri non selezionano nulla.
 - I confronti non distinguono maiuscole e minuscole.
 
-Le regole precedenti con un suffisso come `.pdf` nel modello vengono interpretate sul solo nome. Per limitarsi ai PDF occorre specificare `pdf` nel campo Estensioni. Un criterio di tipo già salvato continua a essere applicato.
-
 ### Classificazione e selezione manuale
 
 - **Certa:** soddisfa un'inclusione e non un'esclusione; selezionata inizialmente.
@@ -195,7 +201,7 @@ Una variante indesiderata può comparire come Possibile senza essere scaricata a
 
 Le date vengono generalizzate conservando la radice completa. Cinquanta numeri della stessa testata possono produrre un'unica regola, anziché cinquanta nomi esatti. Con esempi positivi, i negativi vincolano le proposte senza generare una blacklist per ogni variante. Proposte ambigue vengono segnalate e omesse. Con soli esempi negativi possono essere proposte esclusioni raggruppate.
 
-La generazione da esempi cerca famiglie di nomi con date variabili: **non deduce automaticamente una regola per estensione**, come «tutti i PDF». Nomi diversi possono produrre più regole; i nomi senza una data riconosciuta vengono segnalati senza proporre una regola. Per scegliere un formato usare una regola manuale, come descritto sotto. Non sono esposte espressioni regolari arbitrarie. L'anteprima considera anche le vecchie regole: un'inclusione generica come “contiene La_Gente” può continuare a includere le edizioni locali finché non viene modificata o disattivata.
+La generazione da esempi cerca famiglie di nomi con date variabili: **non deduce automaticamente una regola per estensione**, come «tutti i PDF». Nomi diversi possono produrre più regole; i nomi senza una data riconosciuta vengono segnalati senza proporre una regola. Per scegliere un formato usare una regola manuale, come descritto sotto. Non sono esposte espressioni regolari arbitrarie. L'anteprima considera anche le regole attive già salvate: un'inclusione generica come “contiene La_Gente” può continuare a includere le edizioni locali finché non viene modificata o disattivata.
 
 ### Selezionare soltanto i PDF
 
@@ -240,7 +246,7 @@ In Download sono disponibili **Condividi**, **Salva su FTP**, l’occhio per apr
 
 In **Configura → Server FTP**, configurare host, porta, utente, password e cartella remota già esistente. Salvare le modifiche prima di usare Verifica accesso. È usata la modalità passiva, con FTP binario oppure **FTPS esplicito (TLS)**. FTPS verifica catena e nome del certificato; non accetta automaticamente certificati non attendibili. FTP semplice non cifra credenziali e contenuto. **Verifica accesso** controlla login e cartella; non crea file remoti per provare la scrittura.
 
-La conferma di ogni invio consente di cambiare **Conserva sul dispositivo** solo per quell’operazione, partendo dalla preferenza salvata. Nella 1.5.4 mostra anche la destinazione e permette una sottocartella relativa, per esempio `copie/novembre`, creata se il server lo consente. La cartella base configurata non cambia.
+La conferma di ogni invio consente di cambiare **Conserva sul dispositivo** solo per quell’operazione, partendo dalla preferenza salvata. Il dialogo mostra la destinazione e permette una sottocartella relativa, per esempio `copie/novembre`, creata se il server lo consente. La cartella base configurata non cambia.
 
 | Conserva al termine | Comportamento |
 |---|---|
@@ -259,7 +265,7 @@ I nomi omonimi sul server sono sovrascritti direttamente. Un errore può lasciar
 
 ## Contenuto degli archivi
 
-Gli archivi multipart compaiono come una sola voce in Selezione e vengono raggruppati prima dei filtri sul nome. **Salva** conserva l’archivio originale e i suoi volumi. **Condividi** e **Salva su FTP** permettono di usare gli originali oppure tutti i file contenuti, senza creare copie estratte sul dispositivo. Configura offre la scelta iniziale, modificabile nella conferma di ogni operazione.
+Gli archivi multipart compaiono come una sola voce in Selezione e vengono raggruppati prima dei filtri sul nome. **Salva** conserva l’archivio originale e i suoi volumi. **Condividi** e **Salva su FTP** permettono di usare gli originali oppure tutti i file contenuti, senza creare copie estratte sul dispositivo. In Download, se gli archivi selezionati provengono da canali con scelte diverse, il dialogo propone l’impostazione generale.
 
 L’archivio deve rimanere disponibile mentre le app destinatarie ne leggono i contenuti. **Conserva** su FTP mantiene l’archivio originale; se disattivato, i volumi locali vengono eliminati soltanto dopo il successo dell’invio di tutto il contenuto. La conferma FTP consente una destinazione relativa come `copie/novembre`, senza cambiare la configurazione salvata. Dopo un errore nell’invio di un archivio, l’eventuale pulizia remota richiede conferma.
 
@@ -304,7 +310,7 @@ La libreria TDLib precompilata è inclusa: **per la normale build dell'app non �
 ### 1. Clonare il repository
 
 ```bash
-git clone --branch main https://github.com/TheyKilledKenny/TgFM.git
+git clone --branch develop https://github.com/TheyKilledKenny/TgFM.git
 cd TgFM
 ```
 
@@ -327,7 +333,7 @@ sdk.dir=/percorso/assoluto/Android/Sdk
 
 ### 3. Generare l’APK release
 
-La build distribuita viene compilata con la variante **release**, con debug Java e nativo disabilitati. Le chiavi e le password di firma non sono incluse nel repository.
+Per compilare l’APK di test, eseguire `./gradlew :app:assembleDebug`. Il file prodotto è `app/build/outputs/apk/debug/app-debug.apk`. Per una build **release** firmata, seguire i passaggi sotto.
 
 Per una build firmata, impostare nell’ambiente:
 
@@ -411,31 +417,40 @@ I nomi Telegram e WhatsApp identificano servizi di terze parti. TgFM è un proge
 
 ## Note di rilascio
 
+### 1.5.8 - Impostazioni dei preferiti
+
+In **Configura → Canali preferiti**, ogni canale ha un profilo. Per un canale di riviste, ad esempio, puoi attivare **Foto di copertina** per vedere la foto del post precedente accanto al file. Per un gruppo che pubblica di rado, puoi impostare **Ultimi 7 giorni** come periodo iniziale. Puoi anche scegliere se condividere gli archivi di quel canale come file originali o inviarne il contenuto.
+
+I canali si riconoscono dalla foto profilo. Tocca la foto per spuntare un preferito. In Selezione, apri i dettagli di un file immagine per vederne l’anteprima, anche quando il canale ha le copertine disattivate.
+
+### 1.5.7 - Lingua dell’app
+
+Navigazione, finestre di dialogo, etichette di accessibilità e messaggi di trasferimento sono disponibili in italiano e inglese. Da Android 13 la lingua si può scegliere anche nelle impostazioni di sistema dedicate alla singola app.
+
+### 1.5.6 - Selezione tramite copertina
+
+Nei canali con copertine attive, toccare l’immagine seleziona il file e toccare il resto della riga apre i dettagli. La foto usata come copertina è esclusa da **Seleziona tutti**, così si può salvare il documento senza scaricare anche la foto come file separato.
+
+### 1.5.5 - Regole per canale e foto di copertina
+
+In Filtri puoi comprimere le regole di un canale per trovare più facilmente quelle di un altro. Per riconoscere un allegato dalla foto che il canale pubblica nel messaggio precedente, puoi visualizzarla come copertina e leggerne la didascalia nei dettagli.
+
 ### 1.5.4 - Condivisione degli archivi e FTP
 
-Raggruppamento multipart prima dei filtri, condivisione virtuale del contenuto, decompressione progressiva verso FTP, sottocartella FTP per invio e conferma della pulizia remota. Codice versione 13, APK release ARM64 firmato.
+I volumi di un archivio diviso in più post appaiono come un solo elemento. Puoi condividere o inviare su FTP i volumi originali oppure i file contenuti, senza salvare una seconda copia estratta sul telefono. Per ogni invio FTP puoi scegliere una sottocartella. Se un invio di archivio fallisce, TgFM chiede conferma prima di tentare di eliminare dal server i file coinvolti.
 
 ### 1.5.3 - Prima release stabile
 
-- Interfaccia riorganizzata nelle quattro sezioni Selezione, Download, Filtri e Configura.
-- Comandi fissi sopra la navigazione, elenchi compatti e nomi dei file a tutta larghezza in Selezione e Download.
-- Dettagli completi accessibili toccando il nome o il simbolo di un allegato in Selezione.
-- Regole raggruppate per canale, editor a pagina intera, scelta degli esempi con icone e anteprima dei soli file selezionati.
-- Configurazione suddivisa in Telegram, Canali preferiti, File e cartella e Server FTP, con ritorno visibile dalle sottosezioni.
-- Opzione Conserva sul dispositivo nella conferma FTP, valida solo per l’invio corrente e inizializzata dalla preferenza salvata.
-
-Resta il limite della generazione da esempi per estensione: utilizzare la regola manuale **Solo PDF**. Il motore dei filtri non è stato modificato in questa versione.
-
-Il pacchetto è **1.5.3**, codice versione **12**, APK release ARM64 con debug disabilitato. Il tag `v1.5.3` identifica i sorgenti del rilascio; l’APK firmato e il checksum sono allegati alla GitHub Release. La firma è la stessa dei pacchetti precedenti: è possibile aggiornare l’app senza disinstallarla o cancellarne i dati. La versione rimane nella serie 1.5.x.
+In Selezione e Download i pulsanti restano sopra il menu di navigazione, così puoi agire sui file selezionati senza risalire l’elenco. Tocca un allegato per aprire i dettagli. In Filtri le regole sono raggruppate per canale e l’anteprima mostra quali file verrebbero selezionati dalle regole proposte a partire dagli esempi. Quando invii file su FTP puoi scegliere se tenere le copie sul dispositivo per quel singolo invio.
 
 ### 1.5.2 - Accesso Telegram
 
-Corretto il blocco dell’inizializzazione TDLib, che poteva impedire anche un nuovo login. Rimossi i comandi di recupero dell’accesso precedente; Configura accesso avvia una nuova sessione. Gli errori restano visibili nella sezione Telegram.
+Risolto un blocco che poteva impedire l’accesso a Telegram anche con credenziali valide. Se un tentativo fallisce, il messaggio di errore rimane visibile nella schermata Telegram.
 
 ### 1.5.1 - Accesso ai file
 
-Corretta la richiesta dell’accesso alla memoria e la gestione del ritorno dalle impostazioni Android. Il problema di inizializzazione Telegram è stato risolto nella successiva 1.5.2.
+Quando Android richiede di concedere l’accesso ai file nelle impostazioni di sistema, TgFM ricontrolla il permesso al ritorno nell’app, così si può proseguire con la scelta della cartella.
 
 ### 1.5.0 - Cartella esterna e FTP
 
-Cartella di lavoro esterna con cache TDLib al suo interno, condivisione dei file salvati, invio FTP/FTPS anche durante il download, opzione Conserva al termine ed eliminazione singola o multipla dei file locali.
+Puoi scegliere una cartella sul dispositivo per i download, condividere i file salvati e inviarli a un server FTP o FTPS. Per alcuni trasferimenti l’invio può iniziare mentre Telegram sta ancora scaricando. **Conserva al termine** lascia la copia sul dispositivo dopo l’invio. In Download puoi eliminare un file o più file selezionati.
