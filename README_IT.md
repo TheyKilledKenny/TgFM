@@ -12,7 +12,7 @@ TgFM è un'app Android nativa per consultare gli allegati dei propri canali e gr
 
 L'app utilizza l'account Telegram personale tramite **TDLib** e funziona autonomamente sul telefono, senza un computer o un server applicativo. TgFM segue le lingue preferite di Android. Supporta italiano e inglese e usa l’inglese se nessuna lingua preferita è supportata. In **Configura → Lingua dell’app** puoi scegliere **Italiano**, **English** oppure tornare a **Lingua di sistema**.
 
-**[Scarica TgFM 1.5.8 per Android (APK di test)](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk)** · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256) · [Installazione](#installazione-e-primo-accesso)
+**[Scarica TgFM 1.5.9 per Android (APK di test)](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.9-debug.apk)** · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.9-debug.apk.sha256) · [Installazione](#installazione-e-primo-accesso)
 
 Android 8.0 o successivo · ARM64
 
@@ -69,7 +69,7 @@ Il progetto include soltanto la libreria nativa ARM64. Per un emulatore x86/x86_
 
 ## Installazione e primo accesso
 
-1. Dal browser del telefono scaricare l’APK 1.5.8 tramite il link in cima alla pagina. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
+1. Dal browser del telefono scaricare l’APK 1.5.9 tramite il link in cima alla pagina. Aprire il file `.apk` dai download e scegliere **Installa**. Se Android lo richiede, consentire **Installa app sconosciute** al browser o al gestore file utilizzato. Non servono un computer, ADB o il debug USB. Per aggiornare una copia installata con la stessa firma, aprire il nuovo APK senza disinstallare l’app o cancellarne i dati.
 2. Aprire **Configura**, concedere l’accesso ai file e scegliere la cartella in **File e cartella** (default `Download/TgFM`). In **Telegram**, inserire il proprio **API ID** e **API hash**, ottenuti da [my.telegram.org](https://my.telegram.org) nella sezione *API development tools*. Sono le credenziali di un'app Telegram, non un token Bot API. Non serve ricompilare l'APK.
 3. Premere **Configura accesso**, poi inserire il numero con prefisso internazionale, il codice ricevuto e l'eventuale password di verifica in due passaggi. L'app gestisce anche i passaggi e-mail richiesti da TDLib. Configura accesso avvia una nuova sessione, eliminando il precedente database Telegram; non è necessario premerlo a ogni avvio dopo un login riuscito.
 4. In **Configura → Canali preferiti**, premere **Aggiorna elenco canali e gruppi**, cercare per nome e spuntare quelli da aggiungere ai preferiti. Per un canale su invito, unirsi prima tramite l'app Telegram ufficiale.
@@ -93,7 +93,7 @@ All'avvio, l'app apre Selezione quando sessione e canale preferito sono pronti; 
 
 Flusso abituale:
 
-1. In **Selezione**, toccare il nome o l’immagine del canale per scegliere un preferito. Controllare il periodo in **Post** e premere **Leggi**. La ricerca per nome mantiene selezionati anche i file nascosti.
+1. In **Selezione**, toccare il nome o l’immagine del canale per scegliere un preferito. Scegliere il periodo in **Post**. Con la cache attiva compaiono subito gli allegati già memorizzati. Premere **Leggi** per recuperare quelli mancanti. La ricerca per nome mantiene selezionati anche i file nascosti.
 2. Verificare i risultati, scegliendo **Mostra → Solo selezionati**, **Selezionati e affini** oppure **Tutti i file**. I selezionati sono sempre in alto, anche se selezionati manualmente; Affini indica le corrispondenze Possibili. La vista scelta viene conservata.
 3. Modificare le checkbox e premere **Salva**, **Condividi** oppure **Salva su FTP**.
 4. In Download sono disponibili i file completi della cartella di lavoro: condivisione, FTP, apertura ed eliminazione.
@@ -112,11 +112,20 @@ Il selettore **Post** riguarda la data del messaggio Telegram, indipendentemente
 | **Un giorno preciso** | Tutti i post della data scelta nel calendario |
 | **Intervallo di date** | Dalla mezzanotte iniziale alla fine dell'ultimo giorno scelto, inclusi entrambi i giorni |
 
-Si usa il fuso orario del telefono, rispettando anche i cambi di ora legale. Oggi viene ricalcolato quando si preme Leggi. Quando si apre un canale, TgFM propone il periodo iniziale del suo profilo. Cambiarlo non altera gli allegati già mostrati: per leggere il nuovo periodo premere nuovamente Leggi. Il calendario consente date dal 1970 al 2037, compatibili con i timestamp TDLib; l'intervallo invertito disabilita la lettura e mostra un errore.
+Si usa il fuso orario del telefono, anche quando cambia l’ora legale. **Oggi** e **Ultimi 7 giorni** si riferiscono alla data corrente. Il calendario consente date dal 1970 al 2037. Se la data finale precede quella iniziale, correggere l’intervallo per avviare la lettura.
 
-Per i periodi delimitati TgFM usa `getChatMessageByDate` per raggiungere l'ultimo post entro la data finale, poi legge a ritroso e si ferma al primo post precedente alla data iniziale. Non percorre tutta la cronologia per filtrarla successivamente. La scansione legge i metadati degli allegati. Per le foto visibili, TgFM può caricare piccole anteprime.
+Con la cache disattivata, aprire un canale propone il periodo iniziale del profilo. Dopo aver scelto le date, premere **Leggi** per leggere da Telegram l’intero periodo. I risultati compaiono pagina per pagina. **Annulla operazione** conserva nell’elenco gli allegati già trovati.
 
-I risultati vengono pubblicati a ogni pagina ricevuta e vengono applicate le regole del canale attivo. **Annulla operazione** interrompe le richieste successive mantenendo i nomi, i riferimenti e le selezioni automatiche già raccolti: la dicitura **Lettura parziale** distingue il risultato da una lettura completata. I risultati restano utilizzabili per selezione e download. Una nuova lettura sostituisce l'elenco; il cambio canale lo azzera. I risultati della lettura sono conservati in memoria.
+Per leggere un periodo passato, TgFM usa `getChatMessageByDate` per raggiungere la data finale e scorre i post a ritroso fino alla data iniziale. La scansione legge i metadati degli allegati. Per le foto visibili, TgFM può caricare piccole anteprime.
+
+### Cache dell’elenco allegati
+
+In **Configura → Canali preferiti**, toccare la rotella accanto al canale o al gruppo, attivare **Memorizza elenco allegati** e premere **Salva**. L’opzione è inizialmente disattivata per ogni preferito.
+
+- In **Selezione**, tornando sul canale si ritrova l’ultimo periodo letto. Cambiando periodo, l’elenco mostra subito gli allegati già in cache che rientrano nelle date scelte, anche offline. Si applicano i filtri e le impostazioni delle copertine correnti.
+- Premere **Leggi** per completare gli intervalli mancanti. Se il periodo comprende oggi, TgFM cerca anche i post successivi all’ultima lettura. I risultati si aggiungono man mano. Se la lettura si interrompe, le pagine acquisite restano disponibili per la ripresa.
+- Per verificare modifiche o cancellazioni di vecchi post, riaprire il profilo del preferito, scegliere **Aggiorna da Telegram** e indicare il periodo da rileggere.
+- Disattivando l’opzione si conserva l’elenco per la prossima attivazione. **Svuota cache** è disponibile anche a opzione spenta se ci sono dati. Elimina i metadati e gli intervalli letti per quel preferito e quell’account. I file nella cartella di lavoro e la cache temporanea dei trasferimenti TDLib sono gestiti separatamente.
 
 ## Gruppi filtri e copertine
 
@@ -130,11 +139,11 @@ Tocca la colonna sinistra per selezionare il file. Sulla copertina compare la sp
 
 L'aggiornamento enumera tutte le pagine TDLib della lista principale e di quella archiviata e include canali, supergruppi e gruppi di base; le chat personali sono escluse. Il valore 100 è la dimensione di una pagina di caricamento, non il numero massimo di preferiti o risultati. L'elenco completo viene ordinato per nome e i duplicati vengono rimossi.
 
-In **Configura → Canali preferiti**, toccare la foto del canale per aggiungerlo o rimuoverlo. La spunta indica un preferito. Se la foto manca, compare l’iniziale. In **Selezione**, toccare il nome o la foto per cambiare canale. Premere **Leggi** per caricare gli allegati del nuovo canale con i suoi filtri.
+In **Configura → Canali preferiti**, toccare la foto del canale per aggiungerlo o rimuoverlo. La spunta indica un preferito. Se la foto manca, compare l’iniziale. In **Selezione**, toccare il nome o la foto per cambiare canale.
 
 Ogni regola nuova o modificata deve essere assegnata a un preferito nell'editor. Le proposte da esempi sono assegnate al canale dal quale sono stati letti gli allegati. Regole uguali su canali diversi rimangono distinte.
 
-Rimuovere un preferito cancella anche i filtri associati a quel canale. Se ci sono filtri, compare una sola conferma con il loro numero; annullandola non cambia nulla. Senza filtri associati la rimozione è immediata. I file già scaricati non vengono eliminati. Se si rimuove il canale attivo viene scelto il primo preferito rimasto; senza preferiti si apre Configura.
+Rimuovere un preferito cancella anche la sua cache dell’elenco allegati e i filtri associati. Se ci sono filtri, compare una sola conferma con il loro numero; annullandola non cambia nulla. Senza filtri associati la rimozione è immediata. I file già scaricati non vengono eliminati. Se si rimuove il canale attivo viene scelto il primo preferito rimasto; senza preferiti si apre Configura.
 
 La rotella accanto a ogni preferito apre il suo profilo. **Foto di copertina** è disattivata per impostazione iniziale. Attivarla per usare la foto pubblicata prima dell’allegato. **Periodo iniziale** propone Oggi, Ultimi 7 giorni o Tutti i file. **Invio archivi** permette di seguire la scelta generale oppure di proporre sempre l’archivio originale o il contenuto. La conferma di invio permette di cambiare la scelta per quella sola operazione.
 
@@ -454,3 +463,7 @@ Quando Android richiede di concedere l’accesso ai file nelle impostazioni di s
 ### 1.5.0 - Cartella esterna e FTP
 
 Puoi scegliere una cartella sul dispositivo per i download, condividere i file salvati e inviarli a un server FTP o FTPS. Per alcuni trasferimenti l’invio può iniziare mentre Telegram sta ancora scaricando. **Conserva al termine** lascia la copia sul dispositivo dopo l’invio. In Download puoi eliminare un file o più file selezionati.
+
+### 1.5.9 - Cache dell’elenco allegati per preferito
+
+Con la cache attiva, tornando su un canale o cambiando periodo puoi consultare subito gli allegati già letti. **Leggi** completa le date mancanti e cerca i nuovi post. Dal profilo del preferito puoi aggiornare un periodo per recepire modifiche e cancellazioni su Telegram.

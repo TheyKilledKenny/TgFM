@@ -12,7 +12,7 @@ TgFM is a native Android app for browsing attachments in your Telegram channels 
 
 The app uses your personal Telegram account through **TDLib** and runs independently on your phone, without a computer or application server. TgFM follows your Android language preferences, supports English and Italian, and falls back to English. To override the system choice, open **Settings → App language** and select **English** or **Italiano**. Choose **System default** to follow Android again.
 
-**[Download TgFM 1.5.8 for Android (test APK)](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk)** · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.8-debug.apk.sha256) · [Installation](#installation-and-first-sign-in)
+**[Download TgFM 1.5.9 for Android (test APK)](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.9-debug.apk)** · [SHA-256](https://raw.githubusercontent.com/TheyKilledKenny/TgFM/refs/heads/develop-apk/TgFM-1.5.9-debug.apk.sha256) · [Installation](#installation-and-first-sign-in)
 
 Android 8.0 or later · ARM64
 
@@ -69,7 +69,7 @@ The project includes only the ARM64 native library. For an x86/x86_64 emulator o
 
 ## Installation and first sign-in
 
-1. Download the 1.5.8 test APK using the link at the top of this page in your phone’s browser. Open the `.apk` file from your downloads and choose **Install**. If Android asks, allow **Install unknown apps** for the browser or file manager you used. A computer, ADB, and USB debugging are not needed. To update an installed copy with the same signature, open the new APK without uninstalling the app or deleting its data.
+1. Download the 1.5.9 test APK using the link at the top of this page in your phone’s browser. Open the `.apk` file from your downloads and choose **Install**. If Android asks, allow **Install unknown apps** for the browser or file manager you used. A computer, ADB, and USB debugging are not needed. To update an installed copy with the same signature, open the new APK without uninstalling the app or deleting its data.
 2. Open **Settings**, grant file access, and choose the folder under **Files and folder**. Under **Telegram**, enter your **API ID** and **API hash**, obtained from [my.telegram.org](https://my.telegram.org) under *API development tools*. These are Telegram app credentials, not a Bot API token. You do not need to rebuild the APK.
 3. Tap **Set up access**, then enter your number with its international prefix, the received code, and your two-step verification password if required. The app also handles email steps requested by TDLib. Set up access starts a new session, deleting the previous Telegram database; you do not need to tap it on every launch after a successful login.
 4. Under **Settings → Favorite channels**, tap **Refresh channels and groups**, search by name, and check the ones to add to favorites. For an invite-only channel, first join it using the official Telegram app.
@@ -93,7 +93,7 @@ On startup, the app opens Selection when the session and favorite channel are re
 
 Typical workflow:
 
-1. In **Selection**, tap the channel name or picture to choose a favorite. Check the period under **Post** and tap **Read**. Searching by filename preserves the selection of hidden files.
+1. In **Selection**, tap the channel name or picture to choose a favorite. Choose the period under **Post**. With caching enabled, previously cached attachments appear immediately. Tap **Read** to fetch what is missing. Searching by filename preserves the selection of hidden files.
 2. Check the results, choosing **Show → Selected only**, **Selected and similar**, or **All files**. Selected items are always at the top, including those selected manually. Similar files are possible matches. The chosen view is retained.
 3. Adjust the checkboxes and tap **Save**, **Share**, or **Save to FTP**.
 4. Downloads shows the complete files in the working folder: they can be shared, sent to FTP, opened, or deleted.
@@ -112,11 +112,20 @@ The **Post** selector concerns the Telegram message date, independently of any d
 | **Specific day** | All posts on the date chosen in the calendar |
 | **Date range** | From midnight at the start to the end of the last chosen day, including both days |
 
-The phone's time zone is used, including daylight saving time changes. Today is recalculated when Read is pressed. Opening a channel applies the default period from its profile. Changing it does not alter attachments already displayed: press Read again to read the new period. The calendar allows dates from 1970 to 2037, compatible with TDLib timestamps; a reversed range disables reading and shows an error.
+TgFM uses the phone’s time zone, including daylight saving time changes. **Today** and **Last 7 days** are relative to the current date. The calendar accepts dates from 1970 to 2037. If the end date precedes the start date, correct the range before reading.
 
-For bounded periods, TgFM uses `getChatMessageByDate` to reach the last post within the end date, then reads backwards and stops at the first post before the start date. It does not traverse the entire history and filter it afterwards. The scan reads attachment metadata. Visible photos may load small previews.
+With caching turned off, opening a channel selects the default period from its profile. After choosing the dates, tap **Read** to read the whole period from Telegram. Results appear page by page. **Cancel operation** keeps the attachments already found in the list.
 
-Results are published as each page arrives and the active channel's rules are applied. **Cancel operation** stops subsequent requests while retaining names, references, and automatic selections already collected: **Partial scan** distinguishes the result from a completed read. Results remain available for selection and download. A new read replaces the list; switching channels clears it. Scan results are held in memory.
+To read a past period, TgFM uses `getChatMessageByDate` to reach the end date and reads backwards to the start date. The scan reads attachment metadata. Visible photos may load small previews.
+
+### Attachment list cache
+
+In **Settings → Favorite channels**, tap the settings icon beside the channel or group, turn on **Cache attachment list** and tap **Save**. This option is off by default for each favorite.
+
+- In **Selection**, returning to the channel restores the last period read. Changing the period immediately shows cached attachments within the chosen dates, even offline. The list uses the current filters and photo cover settings.
+- Tap **Read** to fill in missing intervals. If the period includes today, TgFM also checks for posts published since the last read. Results appear as they arrive. If the read is interrupted, completed pages are available when you resume.
+- To check for edits or deletions in older posts, reopen the favorite’s profile, choose **Refresh from Telegram** and select the period to read again.
+- Turning the option off keeps the list for the next time you enable it. **Clear cache** is available even with caching off if stored data exists. It clears the metadata and the periods read for that favorite and account. Files in the working folder and TDLib’s temporary transfer cache are managed separately.
 
 ## Compact filter groups and covers
 
@@ -130,11 +139,11 @@ Tap the left column to select the file. Its cover shows the selection indicator.
 
 Refreshing enumerates all TDLib pages of the main and archived lists and includes channels, supergroups, and basic groups; private chats are excluded. The value 100 is the size of a loading page, not the maximum number of favorites or results. The complete list is sorted by name and duplicates are removed.
 
-In **Settings → Favorite channels**, tap the channel picture to add or remove a favorite. A check mark identifies a favorite. Channels without a picture show their initial. In **Selection**, tap the name or picture to switch channels. Tap **Read** to load the new channel’s attachments with its filters.
+In **Settings → Favorite channels**, tap the channel picture to add or remove a favorite. A check mark identifies a favorite. Channels without a picture show their initial. In **Selection**, tap the name or picture to switch channels.
 
 Each new or edited rule must be assigned to a favorite in the editor. Suggestions from examples are assigned to the channel from which the attachments were read. Identical rules on different channels remain separate.
 
-Removing a favorite also deletes the filters associated with that channel. If there are filters, a single confirmation shows their number; cancelling it changes nothing. With no associated filters, removal is immediate. Already downloaded files are not deleted. If the active channel is removed, the first remaining favorite is selected; if there are no favorites, Settings opens.
+Removing a favorite also deletes its attachment list cache and associated filters. If there are filters, a single confirmation shows their number; cancelling it changes nothing. With no associated filters, removal is immediate. Already downloaded files are not deleted. If the active channel is removed, the first remaining favorite is selected; if there are no favorites, Settings opens.
 
 The settings icon beside each favorite opens its profile. **Photo covers** is off by default. Enable it to use the photo posted immediately before an attachment. **Default period** offers Today, Last 7 days or All files. Under **Archive sharing**, choose the general setting, the original archive or its contents. You can override this choice when confirming an individual transfer.
 
@@ -454,3 +463,7 @@ When Android requires file access to be granted in system settings, TgFM checks 
 ### 1.5.0 - External folder and FTP
 
 Choose a folder on your device for downloads, share saved files and upload them to an FTP or FTPS server. Some uploads can start while Telegram is still downloading. **Keep after upload** keeps the local copy after a successful transfer. In Downloads you can delete one file or several selected files.
+
+### 1.5.9 - Attachment list cache for each favorite
+
+With caching enabled, attachments you have already read appear as soon as you return to a channel or change the period. **Read** fills in missing dates and checks for new posts. From the favorite’s profile you can refresh a period to pick up edits and deletions on Telegram.
